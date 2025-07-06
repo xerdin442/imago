@@ -1,0 +1,12 @@
+services:
+  backend:
+    build:
+      context: .
+      args:
+        - NODE_ENV=development
+    volumes:
+      - ./:/usr/src/app:rw
+    environment:
+      - NODE_ENV=development
+    command: >
+      sh -c "npm run deploy && npm run start:dev"

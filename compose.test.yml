@@ -1,0 +1,15 @@
+services:
+  test-db:
+    image: postgres:latest
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: test-password
+      POSTGRES_DB: test-DB
+
+  test-redis:
+    image: redis:latest
+    restart: always
+    ports:
+      - "6379:6379"
