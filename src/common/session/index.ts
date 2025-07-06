@@ -30,12 +30,12 @@ export class SessionService implements OnModuleInit {
     }
   }
 
-  async get(key: string): Promise<any> {
+  async get(key: string): Promise<SessionData> {
     try {
       const data = await this.redis.get(key);
       logger.info(`[${this.context}] User session retrieved by ${key}.\n`);
 
-      return JSON.parse(data as string);
+      return JSON.parse(data as string) as SessionData;
     } catch (error) {
       logger.error(
         `[${this.context}] An error occurred while retrieving session data. Error: ${error.message}.\n`,
