@@ -14,7 +14,7 @@ const client = new SecretsManagerClient({
 });
 
 // Retrieve wallet keyphrase from cloud storage
-const getWalletKeyphrase = async (): Promise<string> => {
+export const getPlatformWalletKeyphrase = async (): Promise<string> => {
   try {
     const response: GetSecretValueCommandOutput = await client.send(
       new GetSecretValueCommand({
@@ -61,7 +61,4 @@ export const Secrets = {
   ALCHEMY_API_KEY: config.getOrThrow<string>('ALCHEMY_API_KEY'),
   COINGECKO_API_KEY: config.getOrThrow<string>('COINGECKO_API_KEY'),
   THIRDWEB_API_KEY: config.getOrThrow<string>('THIRDWEB_API_KEY'),
-  PLATFORM_WALLET_KEYPHRASE: getWalletKeyphrase().then((keyphrase) => {
-    return keyphrase.trim();
-  }),
 };
