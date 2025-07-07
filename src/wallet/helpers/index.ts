@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Chain } from '@prisma/client';
-import { ChainRPC, USDCTokenAddress } from './constants';
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 import { getAssociatedTokenAddress, transfer } from '@solana/spl-token';
 import { isAddress, isHexStrict } from 'web3-validator';
 import bs58 from 'bs58';
+import { ChainRPC, USDCTokenAddress } from '@src/common/types';
 
 @Injectable()
 export class HelperService {

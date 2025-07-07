@@ -1,16 +1,5 @@
-import { Secrets } from '@src/common/secrets';
 import { GoogleAuthCallbackData } from '@src/common/types';
 import * as cheerio from 'cheerio';
-
-export const selectGoogleCallbackUrl = (): string => {
-  const env = Secrets.NODE_ENV;
-
-  if (env === 'development' || env === 'test') {
-    return 'http://localhost:3000/api/auth/google/callback';
-  }
-
-  return Secrets.GOOGLE_CALLBACK_URL;
-};
 
 export function generateCallbackHtml(data: GoogleAuthCallbackData): string {
   // Use Cheerio to create a simple HTML structure

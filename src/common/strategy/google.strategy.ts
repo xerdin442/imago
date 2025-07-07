@@ -9,7 +9,6 @@ import { GoogleAuthPayload, GoogleAuthUser } from '../types';
 import { Request } from 'express';
 import logger from '../logger';
 import { LoginDTO } from '@src/auth/dto';
-import { selectGoogleCallbackUrl } from '@src/auth/helpers';
 import { DbService } from '@src/db/db.service';
 import { Secrets } from '../secrets';
 import { AuthService } from '@src/auth/auth.service';
@@ -25,7 +24,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy) {
     super({
       clientID: Secrets.GOOGLE_CLIENT_ID,
       clientSecret: Secrets.GOOGLE_CLIENT_SECRET,
-      callbackURL: selectGoogleCallbackUrl(),
+      callbackURL: Secrets.GOOGLE_CALLBACK_URL,
       passReqToCallback: true,
       scope: ['profile', 'email'],
     });
