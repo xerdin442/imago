@@ -10,6 +10,10 @@ services:
       - "8080:8080"
     env_file:
       - ./.env.test
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:5432/test-DB?schema=public
+      - REDIS_URL=redis://default@host.docker.internal:6379
+      - REDIS_HOST=host.docker.internal
     depends_on:
       - test-db
       - test-redis
