@@ -18,7 +18,7 @@ import logger from '@src/common/logger';
   new ValidationPipe({ exceptionFactory: (errors) => new WsException(errors) }),
 )
 @UseFilters(new BaseWsExceptionFilter())
-@WebSocketGateway(8080, { path: 'wagers/dispute' })
+@WebSocketGateway({ path: 'wagers/dispute' })
 export class WagerGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   private readonly server: Server;

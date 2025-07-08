@@ -17,7 +17,7 @@ import logger from '@src/common/logger';
   new ValidationPipe({ exceptionFactory: (errors) => new WsException(errors) }),
 )
 @UseFilters(new BaseWsExceptionFilter())
-@WebSocketGateway(8080, { path: 'wallet/transactions' })
+@WebSocketGateway({ path: 'wallet/transactions' })
 export class WalletGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   private readonly server: Server;

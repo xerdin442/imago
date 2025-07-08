@@ -5,7 +5,7 @@ services:
     restart: always
     ports:
       - "3000:3000"
-      - "8080:8080"
+      - "5555:5555"
     networks:
       - backend-network
     env_file:
