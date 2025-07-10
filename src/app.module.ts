@@ -11,6 +11,7 @@ import { Secrets } from './common/secrets';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { BullModule } from '@nestjs/bull';
+import { AppController } from './app.controller';
 
 @Module({
   imports: [
@@ -50,5 +51,6 @@ import { BullModule } from '@nestjs/bull';
       useClass: ThrottlerGuard,
     },
   ],
+  controllers: [AppController],
 })
 export class AppModule {}
