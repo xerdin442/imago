@@ -22,6 +22,7 @@ export const Secrets = {
   IDEMPOTENCY_KEYS_STORE_INDEX: config.getOrThrow<number>(
     'IDEMPOTENCY_KEYS_STORE_INDEX',
   ),
+  GOOGLE_AUTH_STORE_INDEX: config.getOrThrow<number>('GOOGLE_AUTH_STORE_INDEX'),
   DEFAULT_IMAGE: config.getOrThrow<string>('DEFAULT_IMAGE'),
   RESEND_EMAIL_API_KEY: config.getOrThrow<string>('RESEND_EMAIL_API_KEY'),
   APP_NAME: config.getOrThrow<string>('APP_NAME'),

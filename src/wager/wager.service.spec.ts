@@ -428,6 +428,11 @@ describe('Wager Service', () => {
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(playerOne);
       (prisma.user.update as jest.Mock).mockResolvedValue(playerOne);
       (prisma.wager.update as jest.Mock).mockResolvedValue(wager);
+      (prisma.chat.update as jest.Mock).mockResolvedValue({
+        id: 1,
+        status: 'CLOSED',
+        wagerId: wager.id,
+      });
 
       const response = wagerService.assignWinnerAfterResolution(wager.id, {
         ...playerOne,

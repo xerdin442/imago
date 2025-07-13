@@ -1,7 +1,10 @@
-import { GoogleAuthCallbackData } from '@src/common/types';
 import * as cheerio from 'cheerio';
 
-export function generateCallbackHtml(data: GoogleAuthCallbackData): string {
+export function generateCallbackHtml(
+  identifier: string,
+  redirectUrl: string,
+  nonce: string,
+): string {
   // Use Cheerio to create a simple HTML structure
   const $ = cheerio.load(
     '<!DOCTYPE html><html><head><title>Success</title></head><body></body></html>',
@@ -16,26 +19,16 @@ export function generateCallbackHtml(data: GoogleAuthCallbackData): string {
 
   // Add the script tag to redirect to the homepage
   const scriptContent = `
-    const authUser = ${JSON.stringify(data.user)};
-    const jwtToken = ${JSON.stringify(data.token)};
-    const twoFactorAuth = ${JSON.stringify(data.twoFactorAuth)};
-    const redirectUrl = ${JSON.stringify(data.redirectUrl || '/')};
-
-    console.log('User', authUser);
-    console.log('JWT', jwtToken);
-    console.log('2FA', twoFactorAuth);
-    console.log('Redirect URL', redirectUrl);
-    
     const returnButton = document.getElementById("return-button");    
     returnButton.addEventListener("click", () => {
-      window.location.href = redirectUrl;
+      window.location.href = "${redirectUrl}?googleAuth=${identifier}";
     });
   `;
 
   // Create a script element and append to the body
   const scriptElement = $('<script>')
     .html(scriptContent)
-    .attr('nonce', `${data.nonce}`);
+    .attr('nonce', `${nonce}`);
   $('body').append(scriptElement);
 
   return $.html();

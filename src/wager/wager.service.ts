@@ -350,6 +350,12 @@ export class WagerService {
         },
       });
 
+      // Update dispute chat status
+      await this.prisma.chat.update({
+        where: { wagerId },
+        data: { status: 'CLOSED' },
+      });
+
       // Subtract platform fee and add winnings to the winner's balance
       await this.prisma.user.update({
         where: { username: dto.username },

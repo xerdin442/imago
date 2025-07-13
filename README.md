@@ -12,13 +12,13 @@ This API is a robust backend service for a stablecoin-powered wager application 
 - **Domain Names**: Supports the use of Basenames and SNS domains for withdrawals.
 - **Notifications**: Websockets for real-time transaction updates and chat rooms for dispute resolution.
 - **Queue Management**: Optimized asynchronous processing by using queues to abstract transaction processing, dispute resolution and email notifications from the main application workflow.
-- **Metrics and Analytics**: Tracks important metrics like transaction volumes and dispute resolution rates using Prometheus-compatible endpoints.
+- **Metrics and Analytics**: Tracks important metrics like transaction volumes and dispute resolution rates
 
 ## Coming up...
 
-- **Multi-Player Contests**: Multi-player prize contests for games such as Call of Duty Mobile and Fantasy Premier League (FPL).
+- **Multi-Player Contests**: Multi-player prize contests for games such as Call of Duty Mobile and Fantasy Premier League (FPL). Also, adding support for creating multi-player prize tournaments in football games (such as EA FC or eFootball).
 - **Savings**: Feature to enable auto-save on winnings. The savings will be staked onchain, and yields will be accumulated to grow the user's balance over time.
-- **Rewards**: Onchain reward system to allocate points on public leaderboard for consistent players based on individual wins and winning streak.
+- **Rewards**: Onchain reward system to allocate points on public leaderboard for consistent players based on individual wins and winning streak. The points can be redeemed to get a platform-supported SPL token, which can be withdrawn at any time or swapped to USDC and added to user balance.
 
 ## Deployment
 
@@ -38,7 +38,7 @@ This API is a robust backend service for a stablecoin-powered wager application 
 - **Queues**: BullMQ
 - **Mail**: Resend
 - **Tests**: Jest & Supertest
-- **Metrics**: Prometheus & Grafana
+- **Secrets**: AWS SecretsManager
 - **Blockchain RPC Providers**: Helius (Solana) & Alchemy (Base)
 
 ## Getting Started
@@ -88,18 +88,21 @@ The database schema is located [here](prisma/schema.prisma). If no schema change
 
 ### Auth API
 
-| Method | Path                      | Description                        |
-| ------ | ------------------------- | ---------------------------------- |
-| POST   | /auth/signup              | Sign up a new user                 |
-| POST   | /auth/login               | Sign in an existing user           |
-| POST   | /auth/logout              | Sign out a logged in user          |
-| POST   | /auth/2fa/enable          | Enable 2FA                         |
-| POST   | /auth/2fa/disable         | Disable 2FA                        |
-| POST   | /auth/2fa/verify          | Verify code from authenticator app |
-| POST   | /auth/password/reset      | Request a password reset           |
-| POST   | /auth/password/resend-otp | Resend password reset OTP          |
-| POST   | /auth/password/verify-otp | Verify password reset OTP          |
-| POST   | /auth/password/new        | Change current password            |
+| Method | Path                      | Description                                               |
+| ------ | ------------------------- | --------------------------------------------------------- |
+| POST   | /auth/signup              | Sign up a new user                                        |
+| POST   | /auth/login               | Sign in an existing user                                  |
+| POST   | /auth/logout              | Sign out a logged in user                                 |
+| POST   | /auth/2fa/enable          | Enable 2FA                                                |
+| POST   | /auth/2fa/disable         | Disable 2FA                                               |
+| POST   | /auth/2fa/verify          | Verify code from authenticator app                        |
+| POST   | /auth/password/reset      | Request a password reset                                  |
+| POST   | /auth/password/resend-otp | Resend password reset OTP                                 |
+| POST   | /auth/password/verify-otp | Verify password reset OTP                                 |
+| POST   | /auth/password/new        | Change current password                                   |
+| GET    | /auth/google              | Redirect to Google's authentication page                  |
+| GET    | /auth/google/callback     | Callback added to OAuth client details on Google console  |
+| POST   | /auth/google/details      | Retrieve user details and JWT after Google authentication |
 
 ### Admin API
 
@@ -143,7 +146,41 @@ The database schema is located [here](prisma/schema.prisma). If no schema change
 
 | Method | Path             | Description                    |
 | ------ | ---------------- | ------------------------------ |
-| PATCH  | /wallet/deposit  | Initiate deposit processing    |
-| DELETE | /wallet/withdraw | Initiate withdrawal processing |
+| POST   | /wallet/deposit  | Initiate deposit processing    |
+| POST   | /wallet/withdraw | Initiate withdrawal processing |
+
+## Google Authentication
+
+- The frontend client sends a login request to `auth/google` with a required query parameter to indicate the redirect URL.
+- The client is redirected to Google's onboarding page and the user completes the authentication.
+- Google redirects the frontend client to the success page rendered by the backend. From here, the user is redirected to the frontend client using the earlier specified redirect URL when the `Return` button is clicked on the success page.
+- During the redirect to the frontend client, the backend attaches a `googleAuth` query parameter to the URL. 
+- On page load after the redirect, the frontend client should send a request to `auth/google/details` using the `googleAuth` parameter. The value of this parameter is a unique identifier that will be used by the client to retrieve the JWT and other authentication details from the backend.
+
+## Deposit Transactions
+
+- The frontend client integrates a wallet kit (e.g Reown Appkit or Solana Mobile Wallet Adapter).
+- To make a deposit, the user initiates a wallet connection request through the wallet kit.
+  > Before the connection, the user should have Base Mainnet as the default for Ethereum in their wallet to enable transactions on Base.
+- The wallet kit connects the user wallet and returns the connection details to the frontend client.
+- The user specifies the amount in USDC to deposit, and signs a transaction request to transfer that amount from the connected wallet to the platform wallet.
+- The wallet kit broadcasts the signed transaction to the network and returns the transaction identifier (hash or signature).
+- The frontend client sends the transaction identifier and other details (as required by the `/wallet/deposit` endpoint) to the backend.
+- The backend records the transaction as pending and notifies the user that deposit confirmation has been initiated.
+- The backend confirms the deposit by comparing the onchain data from the transaction identifier with the details sent by the frontend client.
+- The backend notifies the frontend client of the transaction status (success or failed) in real time using websockets.
+
+## Withdrawal Transactions
+
+- The frontend client sends the user's wallet adrress or domain name (only Basenames and SNS domains are supported for now), and other details (as required by the `/wallet/withdraw` endpoint) to the backend. An idempotency key header is also required to prevent duplicate transactions within a 15-minute period.
+- The backend records the transaction as pending and notifies the user that withdrawal processing has been initiated.
+- If the user attempts a similar withdrawal within 15 mins, the backend notifies the user that the initial withdrawal is still being processed.
+- The backend verifies the wallet address or domain name, and initiates a transfer from the platform wallet to the user wallet.
+- The backend notifies the frontend client of the transaction status (success or failed) in real time using websockets.
+
+## Dispute Resolution
+
+- In the event where one player contests the other player's prize claim in a wager, a dispute resolution chat is created with an admin and the two players.
+- After presentation of evidence from both sides and proper verification, the admin assigns a winner and the chat is closed from further discussion.
 
 Happy Wagering! :rocket:

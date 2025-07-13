@@ -24,14 +24,6 @@ export type GoogleAuthPayload = {
   profileImage?: string;
 };
 
-export type GoogleAuthCallbackData = {
-  user?: User;
-  token: string;
-  redirectUrl: string;
-  nonce: string;
-  twoFactorAuth?: boolean;
-};
-
 export enum USDCTokenAddress {
   BASE_SEPOLIA = '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
   BASE_MAINNET = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',

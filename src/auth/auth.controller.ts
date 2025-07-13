@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Post,
+  Query,
   Req,
   Res,
   UnauthorizedException,
@@ -28,16 +29,18 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import * as multer from 'multer';
 import { GoogleAuthGuard } from '../custom/guards/google.guard.';
 import { Request, Response } from 'express';
-import { randomBytes } from 'crypto';
+import { randomBytes, randomUUID } from 'crypto';
 import { AuthService } from './auth.service';
 import {
   GoogleAuthPayload,
   GoogleAuthUser,
-  GoogleAuthCallbackData,
   SessionData,
 } from '@src/common/types';
 import { generateCallbackHtml } from './helpers';
 import logger from '@src/common/logger';
+import { RedisClientType } from 'redis';
+import { connectToRedis } from '@src/common/config/redis';
+import { Secrets } from '@src/common/secrets';
 
 @Controller('auth')
 export class AuthController {
@@ -124,32 +127,75 @@ export class AuthController {
 
   @UseGuards(GoogleAuthGuard)
   @Get('google/callback')
-  googleCallback(@Req() req: Request, @Res() res: Response): void {
-    const authenticatedUser = req.user as GoogleAuthUser;
-    const { token, twoFactorAuth, user } = authenticatedUser;
-
-    if (!authenticatedUser || !token) {
-      res.clearCookie(this.GOOGLE_REDIRECT_COOKIE_KEY);
-      throw new UnauthorizedException('Google authentication error');
-    }
-
-    const nonce = randomBytes(16).toString('base64');
-    const data: GoogleAuthCallbackData = {
-      user,
-      twoFactorAuth,
-      token,
-      redirectUrl: req.cookies?.[this.GOOGLE_REDIRECT_COOKIE_KEY] as string,
-      nonce,
-    };
-
-    // Add CSP header to protect against cross-site origin attacks
-    res.setHeader(
-      'Content-Security-Policy',
-      `script-src 'self' 'nonce-${nonce}'`,
+  async googleCallback(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    const redis: RedisClientType = await connectToRedis(
+      Secrets.REDIS_URL,
+      'Google Authentication',
+      Secrets.GOOGLE_AUTH_STORE_INDEX,
     );
 
-    // Return authentication success page
-    res.status(HttpStatus.OK).send(generateCallbackHtml(data));
+    try {
+      const authenticatedUser = req.user as GoogleAuthUser;
+
+      if (!authenticatedUser || !authenticatedUser.token) {
+        res.clearCookie(this.GOOGLE_REDIRECT_COOKIE_KEY);
+        throw new UnauthorizedException('Google authentication error');
+      }
+
+      const nonce = randomBytes(16).toString('base64');
+      const redirectUrl =
+        (req.cookies?.[this.GOOGLE_REDIRECT_COOKIE_KEY] as string) || '/';
+      const identifier = randomUUID();
+
+      // Store authentication details for retrieval by client
+      await redis.setEx(
+        identifier,
+        3600,
+        JSON.stringify({ ...authenticatedUser }),
+      );
+
+      // Add CSP header to protect against cross-site origin attacks
+      res.setHeader(
+        'Content-Security-Policy',
+        `script-src 'self' 'nonce-${nonce}'`,
+      );
+
+      // Return authentication success page
+      res
+        .status(HttpStatus.OK)
+        .send(generateCallbackHtml(identifier, redirectUrl, nonce));
+    } catch (error) {
+      throw error;
+    } finally {
+      redis.destroy();
+    }
+  }
+
+  @Get('google/details')
+  async getGoogleAuthDetails(
+    @Query('googleAuth') identifier: string,
+  ): Promise<{ details: GoogleAuthUser }> {
+    const redis: RedisClientType = await connectToRedis(
+      Secrets.REDIS_URL,
+      'Google Authentication',
+      Secrets.GOOGLE_AUTH_STORE_INDEX,
+    );
+
+    try {
+      const data = await redis.get(identifier);
+      if (!data) {
+        throw new BadRequestException('Invalid Google Auth identifier');
+      }
+
+      return { details: JSON.parse(data) as GoogleAuthUser };
+    } catch (error) {
+      throw error;
+    } finally {
+      redis.destroy();
+    }
   }
 
   @HttpCode(HttpStatus.OK)

@@ -42,6 +42,11 @@ enum Chain {
   SOLANA
 }
 
+enum DisputeChatStatus {
+  OPEN
+  CLOSED
+}
+
 model User {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
@@ -102,6 +107,8 @@ model Chat {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  status DisputeChatStatus @default(OPEN)
 
   adminId Int
   admin   Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
