@@ -9,7 +9,7 @@
     "migrate": "prisma migrate dev --name init",
     "migrate:local": "npx dotenv -e .env.local -- npm run migrate",
     "deploy": "prisma migrate deploy",
-    "build": "nest build",
+    "build": "npx nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
