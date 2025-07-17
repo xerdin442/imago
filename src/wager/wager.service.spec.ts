@@ -254,6 +254,15 @@ describe('Wager Service', () => {
     });
   });
 
+  describe('Wager Marketplace', () => {
+    it('should populate wager marketplace', async () => {
+      (prisma.wager.findMany as jest.Mock).mockResolvedValue([wager]);
+
+      const response = wagerService.populateWagerMarketplace(playerOne.id);
+      await expect(response).resolves.toEqual([wager]);
+    });
+  });
+
   describe('Claim Wager', () => {
     beforeEach(() => {
       (prisma.wager.findUniqueOrThrow as jest.Mock).mockResolvedValue(wager);

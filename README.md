@@ -80,11 +80,12 @@ The database schema is located [here](prisma/schema.prisma). If no schema change
 
 ## Endpoints
 
-### Metrics
+### App
 
-| Method | Path     | Description                      |
-| ------ | -------- | -------------------------------- |
-| GET    | /metrics | Retrieve all app-related metrics |
+| Method | Path     | Description                          |
+| ------ | -------- | ------------------------------------ |
+| GET    | /metrics | Retrieve all app-related metrics     |
+| GET    | /health  | Health check endpoint for deployment |
 
 ### Auth API
 
@@ -134,6 +135,7 @@ The database schema is located [here](prisma/schema.prisma). If no schema change
 | POST   | /wagers/invite                          | Find wager by invite code              |
 | GET    | /wagers/:wagerId                        | Get wager details                      |
 | PATCH  | /wagers/:wagerId                        | Update wager details                   |
+| GET    | /wagers/marketplace                     | Return wager marketplace               |
 | POST   | /wagers/:wagerId/join                   | Join a pending wager                   |
 | POST   | /wagers/:wagerId/claim                  | Claim wager prize                      |
 | POST   | /wagers/:wagerId/claim/accept           | Accept wager prize claim               |
@@ -154,7 +156,7 @@ The database schema is located [here](prisma/schema.prisma). If no schema change
 - The frontend client sends a login request to `auth/google` with a required query parameter to indicate the redirect URL.
 - The client is redirected to Google's onboarding page and the user completes the authentication.
 - Google redirects the frontend client to the success page rendered by the backend. From here, the user is redirected to the frontend client using the earlier specified redirect URL when the `Return` button is clicked on the success page.
-- During the redirect to the frontend client, the backend attaches a `googleAuth` query parameter to the URL. 
+- During the redirect to the frontend client, the backend attaches a `googleAuth` query parameter to the URL.
 - On page load after the redirect, the frontend client should send a request to `auth/google/details` using the `googleAuth` parameter. The value of this parameter is a unique identifier that will be used by the client to retrieve the JWT and other authentication details from the backend.
 
 ## Deposit Transactions

@@ -181,6 +181,17 @@ export class WagerService {
     }
   }
 
+  async populateWagerMarketplace(userId: number): Promise<Wager[]> {
+    try {
+      return this.prisma.wager.findMany({
+        where: { NOT: { playerOne: userId }, status: 'PENDING' },
+        orderBy: { createdAt: 'desc' },
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
   async claimWager(userId: number, wagerId: number): Promise<string> {
     try {
       const wager = await this.prisma.wager.findUniqueOrThrow({

@@ -105,6 +105,24 @@ export class WagerController {
     }
   }
 
+  @Get('marketplace')
+  @UseGuards(AuthGuard('jwt'))
+  async populateWagerMarketplace(
+    @GetUser() user: User,
+  ): Promise<{ wagers: Wager[] }> {
+    try {
+      return {
+        wagers: await this.wagerService.populateWagerMarketplace(user.id),
+      };
+    } catch (error) {
+      logger.error(
+        `[${this.context}] An error occurred while populating wager marketplace. Error: ${error.message}.\n`,
+      );
+
+      throw error;
+    }
+  }
+
   @Post(':wagerId/join')
   @UseGuards(AuthGuard('jwt'))
   @HttpCode(HttpStatus.OK)

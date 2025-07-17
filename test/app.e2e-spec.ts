@@ -642,6 +642,18 @@ describe('E2E Tests', () => {
     });
   });
 
+  describe('Wager Marketplace', () => {
+    it('should populate wager marketplace with pending wagers created by other players', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/wagers/marketplace`)
+        .set('Authorization', `Bearer ${userOneToken}`);
+
+      expect(response.status).toEqual(200);
+      expect(response.body).toHaveProperty('wagers');
+      expect(Array.isArray(response.body.wagers)).toBe(true);
+    });
+  });
+
   describe('Join Wager', () => {
     it('should join wager', async () => {
       const response = await request(app.getHttpServer())
