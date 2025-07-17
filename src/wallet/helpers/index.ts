@@ -1,23 +1,19 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Chain } from '@prisma/client';
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 import { getAssociatedTokenAddress, transfer } from '@solana/spl-token';
 import { isAddress, isHexStrict } from 'web3-validator';
 import bs58 from 'bs58';
 import { ChainRPC, USDCTokenAddress } from '@src/common/types';
+import { Secrets } from '@src/common/secrets';
 
 @Injectable()
 export class HelperService {
-  private readonly NODE_ENV: string;
-  private readonly ALCHEMY_API_KEY: string;
-  private readonly HELIUS_API_KEY: string;
+  private readonly NODE_ENV: string = Secrets.NODE_ENV;
+  private readonly ALCHEMY_API_KEY: string = Secrets.ALCHEMY_API_KEY;
+  private readonly HELIUS_API_KEY: string = Secrets.HELIUS_API_KEY;
 
-  constructor(private readonly config: ConfigService) {
-    this.NODE_ENV = config.getOrThrow<string>('NODE_ENV');
-    this.ALCHEMY_API_KEY = config.getOrThrow<string>('ALCHEMY_API_KEY');
-    this.HELIUS_API_KEY = config.getOrThrow<string>('HELIUS_API_KEY');
-  }
+  constructor() {}
 
   selectRpcUrl(chain: Chain): string {
     let url: string;
