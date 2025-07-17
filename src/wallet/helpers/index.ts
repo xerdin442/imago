@@ -6,6 +6,7 @@ import { isAddress, isHexStrict } from 'web3-validator';
 import bs58 from 'bs58';
 import { ChainRPC, USDCTokenAddress } from '@src/common/types';
 import { Secrets } from '@src/common/secrets';
+import axios from 'axios';
 
 @Injectable()
 export class HelperService {
@@ -109,5 +110,31 @@ export class HelperService {
 
     const decodedBytes = bs58.decode(identifier);
     return decodedBytes.length === 64;
+  }
+
+  async convertAmountToCrypto(amount: number, chain: Chain): Promise<number> {
+    try {
+      let coinId: string = '';
+      chain === 'BASE' ? (coinId = 'ethereum') : (coinId = 'solana');
+
+      const response = await axios.get(
+        `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd`,
+        {
+          headers: {
+            Accept: 'application/json',
+            'x-cg-demo-api-key': Secrets.COINGECKO_API_KEY,
+          },
+        },
+      );
+
+      let usdPrice: number = 0;
+      chain === 'BASE'
+        ? (usdPrice = response.data.ethereum.usd as number)
+        : (usdPrice = response.data.solana.usd as number);
+
+      return amount / usdPrice;
+    } catch (error) {
+      throw error;
+    }
   }
 }
