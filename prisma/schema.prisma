@@ -72,15 +72,16 @@ model Wager {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  title      String
-  conditions String
-  amount     Int
-  status     WagerStatus   @default(PENDING)
-  category   WagerCategory
-  inviteCode String        @unique
-  playerOne  Int
-  playerTwo  Int?
-  winner     Int?
+  title       String
+  conditions  String
+  amount      Int
+  status      WagerStatus   @default(PENDING)
+  category    WagerCategory
+  inviteCode  String        @unique
+  playerOne   Int
+  playerTwo   Int?
+  winner      Int?
+  marketplace Boolean       @default(false)
 
   chat Chat?
 

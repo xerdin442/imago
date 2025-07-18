@@ -123,6 +123,25 @@ export class WagerController {
     }
   }
 
+  @Post(':wagerId/marketplace/add')
+  @UseGuards(AuthGuard('jwt'))
+  @HttpCode(HttpStatus.OK)
+  async addWagerToMarketplace(
+    @Param('wagerId', ParseIntPipe) wagerId: number,
+  ): Promise<{ message: string }> {
+    try {
+      await this.wagerService.addWagerToMarketplace(wagerId);
+
+      return { message: 'Wager has been added to marketplace!' };
+    } catch (error) {
+      logger.error(
+        `[${this.context}] An error occurred while adding wager to marketplace. Error: ${error.message}.\n`,
+      );
+
+      throw error;
+    }
+  }
+
   @Post(':wagerId/join')
   @UseGuards(AuthGuard('jwt'))
   @HttpCode(HttpStatus.OK)

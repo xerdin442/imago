@@ -39,16 +39,25 @@ export class AuthService {
   ): Promise<User> {
     try {
       const defaultImage = Secrets.DEFAULT_IMAGE;
+      const { email, firstName, lastName } = details;
 
       // Create new user through custom authentication
       if ('password' in details) {
+        // Check if password and confirmation string match
+        if (details.password !== details.confirmPassword) {
+          throw new BadRequestException('Passwords do not match. Try again!');
+        }
+
         // Upload file to AWS if available
         let filePath: string = '';
         if (file) filePath = await uploadFileToS3(file, 'profile-images');
 
         const user = await this.prisma.user.create({
           data: {
-            ...details,
+            email,
+            firstName,
+            lastName,
+            username: details.username,
             password: await argon.hash(details.password),
             profileImage: filePath || defaultImage,
           },
@@ -64,7 +73,9 @@ export class AuthService {
 
       const user = await this.prisma.user.create({
         data: {
-          ...details,
+          email,
+          firstName,
+          lastName,
           password,
           username,
           balance: 0,

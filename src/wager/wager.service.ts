@@ -181,10 +181,27 @@ export class WagerService {
     }
   }
 
+  async addWagerToMarketplace(wagerId: number): Promise<void> {
+    try {
+      await this.prisma.wager.update({
+        where: { id: wagerId },
+        data: { marketplace: true },
+      });
+
+      return;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   async populateWagerMarketplace(userId: number): Promise<Wager[]> {
     try {
       return this.prisma.wager.findMany({
-        where: { NOT: { playerOne: userId }, status: 'PENDING' },
+        where: {
+          NOT: { playerOne: userId },
+          status: 'PENDING',
+          marketplace: true,
+        },
         orderBy: { createdAt: 'desc' },
       });
     } catch (error) {

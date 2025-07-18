@@ -29,6 +29,10 @@ export class SignupDTO {
 
   @IsNotEmpty()
   @IsString()
+  confirmPassword: string;
+
+  @IsNotEmpty()
+  @IsString()
   firstName: string;
 
   @IsNotEmpty()

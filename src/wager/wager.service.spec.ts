@@ -53,6 +53,7 @@ describe('Wager Service', () => {
     playerTwo: null,
     status: 'PENDING',
     winner: null,
+    marketplace: false,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -254,12 +255,22 @@ describe('Wager Service', () => {
     });
   });
 
-  describe('Wager Marketplace', () => {
+  describe('Marketplace', () => {
     it('should populate wager marketplace', async () => {
       (prisma.wager.findMany as jest.Mock).mockResolvedValue([wager]);
 
       const response = wagerService.populateWagerMarketplace(playerOne.id);
       await expect(response).resolves.toEqual([wager]);
+    });
+
+    it('should add wager to marketplace', async () => {
+      (prisma.wager.update as jest.Mock).mockResolvedValue({
+        ...wager,
+        marketplace: true,
+      });
+
+      const response = wagerService.addWagerToMarketplace(wager.id);
+      await expect(response).resolves.toBeUndefined();
     });
   });
 

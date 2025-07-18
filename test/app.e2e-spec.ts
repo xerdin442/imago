@@ -31,6 +31,7 @@ describe('E2E Tests', () => {
   const userOne: SignupDTO = {
     email: 'xerdinludac@gmail.com',
     password: 'Xerdin442!',
+    confirmPassword: 'Xerdin442!',
     firstName: 'Xerdin',
     lastName: 'Ludac',
     username: 'xerdin442',
@@ -40,6 +41,7 @@ describe('E2E Tests', () => {
     firstName: 'Jada',
     lastName: 'Williams',
     password: 'Jada987@',
+    confirmPassword: 'Jada987@',
     username: 'jada_wills',
   };
 
@@ -652,6 +654,18 @@ describe('E2E Tests', () => {
       expect(response.body).toHaveProperty('wagers');
       expect(Array.isArray(response.body.wagers)).toBe(true);
     });
+
+    it('should add wager to marketplace', async () => {
+      const response = await request(app.getHttpServer())
+        .post(`/wagers/${wagerId}/marketplace/add`)
+        .set('Authorization', `Bearer ${userOneToken}`);
+
+      expect(response.status).toEqual(200);
+      expect(response.body).toHaveProperty('message');
+      expect(response.body.message).toEqual(
+        'Wager has been added to marketplace!',
+      );
+    });
   });
 
   describe('Join Wager', () => {
@@ -710,7 +724,7 @@ describe('E2E Tests', () => {
   });
 
   describe('Dispute Resolution', () => {
-    it('should retrieve all dispute chat messages as a player', async () => {
+    it('should retrieve all dispute chat messages for a contested wager', async () => {
       const response = await request(app.getHttpServer())
         .get(`/wagers/${wagerId}/dispute/chat`)
         .set('Authorization', `Bearer ${userOneToken}`);

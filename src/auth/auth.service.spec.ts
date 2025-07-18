@@ -46,6 +46,7 @@ describe('Auth Service', () => {
     firstName: 'Cristiano',
     lastName: 'Ronaldo',
     password: 'Password',
+    confirmPassword: 'Password',
     username: 'goat_cr7',
   };
 
@@ -93,6 +94,18 @@ describe('Auth Service', () => {
   });
 
   describe('Create New User', () => {
+    it('should throw if password confirmation check fails in custom authentication', async () => {
+      const response = authService.createNewUser({
+        ...signupDto,
+        confirmPassword: 'Wrong Password',
+      });
+
+      await expect(response).rejects.toBeInstanceOf(BadRequestException);
+      await expect(response).rejects.toThrow(
+        'Passwords do not match. Try again!',
+      );
+    });
+
     it('should create new user through custom authentication', async () => {
       (prisma.user.create as jest.Mock).mockResolvedValue(user);
 

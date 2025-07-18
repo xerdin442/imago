@@ -136,6 +136,7 @@ The database schema is located [here](prisma/schema.prisma). If no schema change
 | GET    | /wagers/:wagerId                        | Get wager details                      |
 | PATCH  | /wagers/:wagerId                        | Update wager details                   |
 | GET    | /wagers/marketplace                     | Return wager marketplace               |
+| POST   | /wagers/:wagerId/marketplace/add        | Add a wager to the marketplace         |
 | POST   | /wagers/:wagerId/join                   | Join a pending wager                   |
 | POST   | /wagers/:wagerId/claim                  | Claim wager prize                      |
 | POST   | /wagers/:wagerId/claim/accept           | Accept wager prize claim               |
