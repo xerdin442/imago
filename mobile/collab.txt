@@ -1,0 +1,13 @@
+Welcome to Imago!
+
+COLLABORATION WORKFLOW
+-----------------------
+- To begin working with the team, clone the repository to your local machine.
+- DO NOT WRITE CODE ON THE MASTER BRANCH.
+- Create a local feature branch for anything you're working on (e.g. feat/auth-screens), and make a pull request afterwards.
+- The PR will be reviewed and merged to the master branch if all requirements are met.
+- If there are corrections, it will be communicated to you. You can then update the feature branch and push the changes.
+- If there are no corrections, create another feature branch locally and continue working.
+
+
+Happy to have you on the team!
