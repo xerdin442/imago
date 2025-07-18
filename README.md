@@ -10,9 +10,7 @@ This is a stablecoin-powered wagering application that enables users create and 
 - **Dispute Resolution**: Evidence-based resolution mechanism to address disputes between wager players, with a focus on fairness and transparency.
 - **Stablecoin Integration**: USDC deposits and withdrawals (on Base and Solana) to enhance borderless payments.
 - **Domain Names**: Supports the use of Basenames and SNS domains for withdrawals.
-- **Notifications**: Websockets for real-time transaction updates and chat rooms for dispute resolution.
-- **Queue Management**: Optimized asynchronous processing by using queues to abstract transaction processing, dispute resolution and email notifications from the main application workflow.
-- **Metrics and Analytics**: Tracks important metrics like transaction volumes and dispute resolution rates
+- **Notifications**: Real-time transaction updates and email notifications.
 
 ## Coming up...
 
@@ -21,4 +19,4 @@ This is a stablecoin-powered wagering application that enables users create and 
 - **Rewards**: Onchain reward system to allocate points on public leaderboard for consistent players based on individual wins and winning streak. The points can be redeemed to get a platform-supported SPL token, which can be withdrawn at any time or swapped to USDC and added to user balance.
 
 ## Demo
-Here's a quick demo showing what's in store on Imago!
+Here's a quick demo of what's in store on the Imago app!
