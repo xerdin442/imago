@@ -64,28 +64,28 @@ The database schema is located [here](prisma/schema.prisma). If no schema change
 
 ### App
 
-| Method | Path     | Description                          |
-| ------ | -------- | ------------------------------------ |
-| GET    | /metrics | Retrieve all app-related metrics     |
-| GET    | /health  | Health check endpoint for deployment |
+| Method | Path            | Description                          |
+| ------ | --------------- | ------------------------------------ |
+| GET    | /metrics?admin= | Retrieve all app-related metrics     |
+| GET    | /health         | Health check endpoint for deployment |
 
 ### Auth API
 
-| Method | Path                      | Description                                               |
-| ------ | ------------------------- | --------------------------------------------------------- |
-| POST   | /auth/signup              | Sign up a new user                                        |
-| POST   | /auth/login               | Sign in an existing user                                  |
-| POST   | /auth/logout              | Sign out a logged in user                                 |
-| POST   | /auth/2fa/enable          | Enable 2FA                                                |
-| POST   | /auth/2fa/disable         | Disable 2FA                                               |
-| POST   | /auth/2fa/verify          | Verify code from authenticator app                        |
-| POST   | /auth/password/reset      | Request a password reset                                  |
-| POST   | /auth/password/resend-otp | Resend password reset OTP                                 |
-| POST   | /auth/password/verify-otp | Verify password reset OTP                                 |
-| POST   | /auth/password/new        | Change current password                                   |
-| GET    | /auth/google              | Redirect to Google's authentication page                  |
-| GET    | /auth/google/callback     | Callback added to OAuth client details on Google console  |
-| POST   | /auth/google/details      | Retrieve user details and JWT after Google authentication |
+| Method | Path                             | Description                                               |
+| ------ | -------------------------------- | --------------------------------------------------------- |
+| POST   | /auth/signup                     | Sign up a new user                                        |
+| POST   | /auth/login                      | Sign in an existing user                                  |
+| POST   | /auth/logout                     | Sign out a logged in user                                 |
+| POST   | /auth/2fa/enable                 | Retrieve QRcode image url to enable 2FA                   |
+| POST   | /auth/2fa/disable                | Disable 2FA                                               |
+| POST   | /auth/2fa/verify                 | Verify code from authenticator app                        |
+| POST   | /auth/password/reset             | Request a password reset                                  |
+| POST   | /auth/password/resend-otp        | Resend password reset OTP                                 |
+| POST   | /auth/password/verify-otp        | Verify password reset OTP                                 |
+| POST   | /auth/password/new               | Change current password                                   |
+| GET    | /auth/google                     | Redirect to Google's authentication page                  |
+| GET    | /auth/google/callback            | Callback added to OAuth client details on Google console  |
+| GET    | /auth/google/details?googleAuth= | Retrieve user details and JWT after Google authentication |
 
 ### Admin API
 
