@@ -65,6 +65,7 @@ describe('Auth Service', () => {
     twoFASecret: null,
     twoFAEnabled: false,
     balance: 0,
+    rewards: 0,
   };
 
   beforeAll(async () => {
@@ -126,6 +127,7 @@ describe('Auth Service', () => {
         twoFASecret: null,
         twoFAEnabled: false,
         balance: 0,
+        rewards: 0,
       };
       (prisma.user.create as jest.Mock).mockResolvedValue(googleAuthUser);
 

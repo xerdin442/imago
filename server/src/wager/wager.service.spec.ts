@@ -26,6 +26,7 @@ describe('Wager Service', () => {
     twoFASecret: null,
     twoFAEnabled: false,
     balance: 25,
+    rewards: 0,
   };
 
   const playerTwo: User = {

@@ -103,6 +103,7 @@ describe('Wallet Service', () => {
     twoFASecret: null,
     twoFAEnabled: false,
     balance: 0,
+    rewards: 0,
   };
 
   const keypair = {
@@ -167,6 +168,7 @@ describe('Wallet Service', () => {
       new PublicKey(USDCTokenAddress.SOLANA_DEVNET),
     );
     helper.transferTokensOnSolana.mockResolvedValue('confirmed-tx-signature');
+    helper.convertAmountToCrypto.mockResolvedValue(2);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -972,33 +974,8 @@ describe('Wallet Service', () => {
     });
   });
 
-  describe('Fiat to Crypto Conversion', () => {
-    it('should convert fiat amount to ethereum equivalent', async () => {
-      jest.spyOn(axios, 'get').mockResolvedValue({
-        data: {
-          ethereum: { usd: 3600 },
-        },
-      });
-
-      const response = walletService.convertAmountToCrypto(1000, 'BASE');
-      await expect(response).resolves.toEqual(1000 / 3600);
-    });
-
-    it('should convert fiat amount to solana equivalent', async () => {
-      jest.spyOn(axios, 'get').mockResolvedValue({
-        data: {
-          solana: { usd: 180 },
-        },
-      });
-
-      const response = walletService.convertAmountToCrypto(45, 'SOLANA');
-      await expect(response).resolves.toEqual(45 / 180);
-    });
-  });
-
   describe('Ethereum Wallet Balance', () => {
     beforeEach(() => {
-      jest.spyOn(walletService, 'convertAmountToCrypto').mockResolvedValue(2);
       jest.spyOn(walletService, 'getPlatformWallet').mockResolvedValue(wallet);
 
       (web3.eth.accounts.privateKeyToAccount as jest.Mock).mockReturnValue(
@@ -1053,7 +1030,6 @@ describe('Wallet Service', () => {
 
   describe('Solana Wallet Balance', () => {
     beforeEach(() => {
-      jest.spyOn(walletService, 'convertAmountToCrypto').mockResolvedValue(2);
       jest.spyOn(walletService, 'getPlatformWallet').mockResolvedValue(keypair);
     });
 

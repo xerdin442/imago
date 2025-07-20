@@ -23,6 +23,7 @@ describe('User Service', () => {
     twoFASecret: null,
     twoFAEnabled: false,
     balance: 0,
+    rewards: 0,
   };
 
   beforeAll(async () => {
@@ -93,6 +94,7 @@ describe('User Service', () => {
         playerTwo: 23,
         status: 'ACTIVE',
         winner: null,
+        marketplace: false,
         createdAt: new Date(),
         updatedAt: new Date(),
       };

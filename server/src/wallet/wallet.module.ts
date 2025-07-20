@@ -22,5 +22,6 @@ import { WalletProcessor } from './wallet.processor';
     SolanaWeb3Provider,
     HelperService,
   ],
+  exports: [WalletService],
 })
 export class WalletModule {}
