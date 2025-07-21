@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Get,
   Headers,
   HttpCode,
   HttpStatus,
@@ -10,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { Transaction, User } from '@prisma/client';
 import { GetUser } from '../custom/decorators';
-import { DepositDTO, WithdrawalDTO } from './dto';
+import { DepositDTO, RedeemRewardsDTO, WithdrawalDTO } from './dto';
 import { AuthGuard } from '@nestjs/passport';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
@@ -198,4 +199,66 @@ export class WalletController {
       throw error;
     }
   }
+
+  @Get('rewards')
+  async getRewards(@GetUser() user: User): Promise<{ rewards: number }> {
+    try {
+      return { rewards: await this.walletService.getRewards(user.id) };
+    } catch (error) {
+      logger.error(
+        `[${this.context}] An error occurred while fetching user rewards. Error: ${error.message}\n`,
+      );
+
+      throw error;
+    }
+  }
+
+  @Post('rewards/redeem')
+  @HttpCode(HttpStatus.OK)
+  async redeemRewards(
+    @GetUser() user: User,
+    @Body() dto: RedeemRewardsDTO,
+  ): Promise<{ message: string }> {
+    try {
+      // Resolve recipient's domain name if provided
+      if (dto.address.endsWith('.sol')) {
+        const resolvedAddress = await this.walletService.resolveDomainName(
+          'SOLANA',
+          dto.address,
+        );
+
+        if (!resolvedAddress) {
+          throw new BadRequestException('Invalid or unregistered SNS domain');
+        }
+
+        dto.address = resolvedAddress;
+      }
+
+      // Validate recipient address
+      const isValidAddress: boolean = this.helper.validateAddress(
+        'SOLANA',
+        dto.address,
+      );
+      if (!isValidAddress) {
+        throw new BadRequestException('Invalid recipient address');
+      }
+
+      // Redeem user rewards
+      const signature = await this.walletService.redeemRewards(user.id, dto);
+
+      return {
+        message: `Your rewards have been redeemed to BONK tokens and transferred to your wallet! Verify the transaction here: ${signature}`,
+      };
+    } catch (error) {
+      logger.error(
+        `[${this.context}] An error occurred while redeeming user rewards. Error: ${error.message}\n`,
+      );
+
+      throw error;
+    }
+  }
+
+  @Post('rewards/convert')
+  @HttpCode(HttpStatus.OK)
+  async convertRewards(@GetUser() user: User) {}
 }

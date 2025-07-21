@@ -17,7 +17,7 @@ import {
   NameRegistryState,
   SNSError,
 } from '@bonfida/spl-name-service';
-import { DepositDTO, WithdrawalDTO } from './dto';
+import { DepositDTO, RedeemRewardsDTO, WithdrawalDTO } from './dto';
 import axios from 'axios';
 import * as bip39 from 'bip39';
 import { ETH_WEB3_PROVIDER_TOKEN, SOL_WEB3_PROVIDER_TOKEN } from './providers';
@@ -56,7 +56,8 @@ export class WalletService {
   private readonly ETHEREUM_DERIVATION_PATH = "m/44'/60'/0'/0/1";
 
   // Minimum amount in USD for native assets and stablecoins
-  private readonly PLATFORM_WALLET_MINIMUM_BALANCE: number = 3500;
+  private readonly STABLECOIN_MINIMUM_BALANCE: number = 3500;
+  private readonly REWARDS_RESERVE_MINIMUM_BALANCE: number = 3500;
 
   constructor(
     private readonly prisma: DbService,
@@ -577,6 +578,7 @@ export class WalletService {
         sender,
         recipient,
         dto.amount,
+        'usdc',
       );
 
       // Update user balance and store transaction details
@@ -651,12 +653,12 @@ export class WalletService {
 
       // Convert allowed minimum amount to crypto equivalent
       const minimumBalance = await this.helper.convertAmountToCrypto(
-        this.PLATFORM_WALLET_MINIMUM_BALANCE / 4,
+        this.STABLECOIN_MINIMUM_BALANCE / 4,
         chain,
       );
 
       if (chain === 'BASE') {
-        const platformWallet = (await this.getPlatformWallet('BASE')) as Wallet;
+        const platformWallet = (await this.getPlatformWallet(chain)) as Wallet;
         const privateKey = platformWallet.getPrivateKeyString();
 
         const account = this.web3.eth.accounts.privateKeyToAccount(privateKey);
@@ -710,19 +712,21 @@ export class WalletService {
     }
   }
 
-  async checkStablecoinBalance(chain: Chain): Promise<void> {
+  async checkTokenBalance(chainOrToken: Chain | 'BONK'): Promise<void> {
     try {
       let lowBalanceCheck: boolean = false;
       let currentBalance: number = 0;
 
-      if (chain === 'BASE') {
-        const platformWallet = (await this.getPlatformWallet('BASE')) as Wallet;
+      if (chainOrToken === 'BASE') {
+        const platformWallet = (await this.getPlatformWallet(
+          chainOrToken,
+        )) as Wallet;
 
         // Get USDC contract
         const usdcContract = getContract({
           client: this.thirdweb,
           chain: Secrets.NODE_ENV === 'production' ? base : baseSepolia,
-          address: this.helper.selectUSDCTokenAddress('BASE'),
+          address: this.helper.selectUSDCTokenAddress(chainOrToken),
         });
 
         // Fetch USDC balance of platform wallet
@@ -734,14 +738,19 @@ export class WalletService {
         currentBalance = Number(balanceInDecimals) / 1e6;
 
         // Check if balance is below allowed minimum
-        if (currentBalance < this.PLATFORM_WALLET_MINIMUM_BALANCE)
+        if (currentBalance < this.STABLECOIN_MINIMUM_BALANCE)
           lowBalanceCheck = true;
       }
 
-      if (chain === 'SOLANA') {
-        const platformWallet = (await this.getPlatformWallet(chain)) as Keypair;
+      if (chainOrToken === 'SOLANA') {
+        const platformWallet = (await this.getPlatformWallet(
+          chainOrToken,
+        )) as Keypair;
+
+        // Get USDC token address of platform wallet
         const platformTokenAddress = await this.helper.getTokenAccountAddress(
           platformWallet.publicKey,
+          'usdc',
         );
 
         // Fetch USDC balance of platform wallet
@@ -750,29 +759,110 @@ export class WalletService {
         currentBalance = balance.value.uiAmount as number;
 
         // Check if balance is below allowed minimum
-        if (currentBalance < this.PLATFORM_WALLET_MINIMUM_BALANCE)
+        if (currentBalance < this.STABLECOIN_MINIMUM_BALANCE)
           lowBalanceCheck = true;
       }
 
-      // Notify admin if balance is low
+      if (chainOrToken === 'BONK') {
+        let bonkLowBalanceCheck: boolean = false;
+        let bonkBalance: number = 0;
+
+        const platformWallet = (await this.getPlatformWallet(
+          'SOLANA',
+        )) as Keypair;
+
+        // Get BONK token address of the platform wallet
+        const platformTokenAddress = await this.helper.getTokenAccountAddress(
+          platformWallet.publicKey,
+          'bonk',
+        );
+
+        // Fetch BONK balance of platform wallet
+        const balance =
+          await this.connection.getTokenAccountBalance(platformTokenAddress);
+        bonkBalance = balance.value.uiAmount as number;
+
+        // Check if balance is below allowed minimum
+        if (bonkBalance < this.REWARDS_RESERVE_MINIMUM_BALANCE)
+          bonkLowBalanceCheck = true;
+
+        // Notify admin if BONK balance is low
+        if (bonkLowBalanceCheck) {
+          const admin = await this.prisma.admin.findUniqueOrThrow({
+            where: { id: 1 },
+          });
+
+          const content = `The platform wallet has a rewards reserve balance of ${currentBalance} BONK.`;
+          await sendEmail(admin.email, 'Low Balance Alert', content);
+
+          logger.warn(
+            `[${this.context}] The platform wallet has a low rewards reserve balance. Balance: ${currentBalance} BONK.\n`,
+          );
+
+          return;
+        }
+      }
+
+      // Notify admin if stablecoin balance is low
       if (lowBalanceCheck) {
         const admin = await this.prisma.admin.findUniqueOrThrow({
           where: { id: 1 },
         });
 
-        const content = `The platform wallet on ${chain.toLowerCase()} has a stablecoin balance of ${currentBalance}USDC.`;
+        const content = `The platform wallet on ${chainOrToken.toLowerCase()} has a stablecoin balance of ${currentBalance} USDC.`;
         await sendEmail(admin.email, 'Low Balance Alert', content);
 
         logger.warn(
-          `[${this.context}] The platform wallet on ${chain} has a low stablecoin balance. Balance: ${currentBalance}USDC.\n`,
+          `[${this.context}] The platform wallet on ${chainOrToken} has a low stablecoin balance. Balance: ${currentBalance} USDC.\n`,
         );
+
+        return;
       }
     } catch (error) {
       logger.error(
-        `[${this.context}] An error occured while checking stablecoin balance of platform wallet on ${chain}\n`,
+        `[${this.context}] An error occured while checking stablecoin balance of platform wallet on ${chainOrToken}\n`,
       );
 
       throw error;
     }
   }
+
+  async getRewards(userId: number): Promise<number> {
+    try {
+      const user = await this.prisma.user.findUniqueOrThrow({
+        where: { id: userId },
+      });
+
+      const rewards = await this.helper.calculateOnchainRewards(user.rewards);
+      return rewards;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async redeemRewards(userId: number, dto: RedeemRewardsDTO): Promise<string> {
+    try {
+      const user = await this.prisma.user.findUniqueOrThrow({
+        where: { id: userId },
+      });
+
+      const sender = (await this.getPlatformWallet('SOLANA')) as Keypair;
+      const recipient = new PublicKey(dto.address);
+
+      // Withdraw equivalent of user rewards in BONK token from platform wallet
+      const signature = await this.helper.transferTokensOnSolana(
+        this.connection,
+        sender,
+        recipient,
+        user.rewards,
+        'bonk',
+      );
+
+      return signature;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async convertRewards(userId: number) {}
 }

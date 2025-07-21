@@ -12,7 +12,6 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { BullModule } from '@nestjs/bull';
 import { AppController } from './app.controller';
-import { RewardsModule } from './rewards/rewards.module';
 
 @Module({
   imports: [
@@ -23,7 +22,6 @@ import { RewardsModule } from './rewards/rewards.module';
     WalletModule,
     DbModule,
     MetricsModule,
-    RewardsModule,
     ConfigModule.forRoot({ isGlobal: true }),
     BullModule.forRoot({
       redis: {

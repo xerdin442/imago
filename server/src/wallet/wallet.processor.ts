@@ -117,7 +117,7 @@ export class WalletProcessor {
       );
 
       // Check balance of native assets and stablecoins in platform wallet
-      await this.walletService.checkStablecoinBalance(dto.chain);
+      await this.walletService.checkTokenBalance(dto.chain);
       await this.walletService.checkNativeAssetBalance(dto.chain);
     } catch (error) {
       logger.error(

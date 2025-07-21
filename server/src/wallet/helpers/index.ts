@@ -50,13 +50,19 @@ export class HelperService {
     return address;
   }
 
-  async getTokenAccountAddress(owner: PublicKey): Promise<PublicKey> {
+  async getTokenAccountAddress(
+    owner: PublicKey,
+    token: 'usdc' | 'bonk',
+  ): Promise<PublicKey> {
     try {
-      return getAssociatedTokenAddress(
-        new PublicKey(this.selectUSDCTokenAddress('SOLANA')),
-        owner,
-        true,
-      );
+      let tokenAddress: PublicKey;
+      token === 'usdc'
+        ? (tokenAddress = new PublicKey(this.selectUSDCTokenAddress('SOLANA')))
+        : (tokenAddress = new PublicKey(
+            'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
+          ));
+
+      return getAssociatedTokenAddress(tokenAddress, owner, true);
     } catch (error) {
       throw error;
     }
@@ -67,14 +73,18 @@ export class HelperService {
     sender: Keypair,
     recipient: PublicKey,
     amount: number,
+    token: 'usdc' | 'bonk',
   ): Promise<string> {
     try {
       // Get the token account addresses of platform wallet and recipient address
       const senderTokenAddress = await this.getTokenAccountAddress(
         sender.publicKey,
+        token,
       );
-      const recipientTokenAddress =
-        await this.getTokenAccountAddress(recipient);
+      const recipientTokenAddress = await this.getTokenAccountAddress(
+        recipient,
+        token,
+      );
 
       // Initiate transfer of USDC tokens from platform wallet
       const signature = await transfer(
@@ -133,6 +143,29 @@ export class HelperService {
         : (usdPrice = response.data.solana.usd as number);
 
       return amount / usdPrice;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async calculateOnchainRewards(amount: number): Promise<number> {
+    try {
+      // Fetch current price of BONk token
+      const response = await axios.get(
+        `https://api.coingecko.com/api/v3/simple/price?ids=bonk&vs_currencies=usd`,
+        {
+          headers: {
+            Accept: 'application/json',
+            'x-cg-demo-api-key': Secrets.COINGECKO_API_KEY,
+          },
+        },
+      );
+
+      // Convert USD amount to BONK token equivalent
+      const bonkPrice = response.data.bonk.usd as number;
+      const bonkValue = amount / bonkPrice;
+
+      return parseFloat(bonkValue.toFixed(2));
     } catch (error) {
       throw error;
     }
