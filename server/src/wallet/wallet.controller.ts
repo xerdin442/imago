@@ -247,7 +247,7 @@ export class WalletController {
       const signature = await this.walletService.redeemRewards(user.id, dto);
 
       return {
-        message: `Your rewards have been redeemed to BONK tokens and transferred to your wallet! Verify the transaction here: ${signature}`,
+        message: `Your rewards have been redeemed to BONK tokens and transferred to your wallet. Verify the transaction here: https://solscan.io/tx/${signature}?cluster=mainnet`,
       };
     } catch (error) {
       logger.error(
@@ -260,5 +260,19 @@ export class WalletController {
 
   @Post('rewards/convert')
   @HttpCode(HttpStatus.OK)
-  async convertRewards(@GetUser() user: User) {}
+  async convertRewards(@GetUser() user: User): Promise<{ message: string }> {
+    try {
+      await this.walletService.convertRewards(user.id);
+
+      return {
+        message: 'Your rewards have been converted and added to your balance',
+      };
+    } catch (error) {
+      logger.error(
+        `[${this.context}] An error occurred while converting user rewards. Error: ${error.message}\n`,
+      );
+
+      throw error;
+    }
+  }
 }

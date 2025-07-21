@@ -864,5 +864,24 @@ export class WalletService {
     }
   }
 
-  async convertRewards(userId: number) {}
+  async convertRewards(userId: number): Promise<void> {
+    try {
+      const user = await this.prisma.user.findUniqueOrThrow({
+        where: { id: userId },
+      });
+
+      // Update user balance and reset rewards value
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          balance: { increment: Math.floor(user.rewards) },
+          rewards: 0,
+        },
+      });
+
+      return;
+    } catch (error) {
+      throw error;
+    }
+  }
 }
