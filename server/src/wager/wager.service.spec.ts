@@ -7,10 +7,12 @@ import { DbService } from '@src/db/db.service';
 import { CreateWagerDTO } from './dto';
 import { WagerService } from './wager.service';
 import { BadRequestException } from '@nestjs/common';
+import { HelperService } from './helpers';
 
 describe('Wager Service', () => {
   let wagerService: WagerService;
   let prisma: DeepMocked<DbService>;
+  let helper: DeepMocked<HelperService>;
   let wagerQueue: DeepMocked<Queue>;
 
   const playerOne: User = {
@@ -60,6 +62,12 @@ describe('Wager Service', () => {
   };
 
   beforeAll(async () => {
+    helper = createMock<HelperService>();
+
+    // Mock the helper service methods
+    helper.calculatePlatformFee.mockReturnValue(10);
+    helper.updateRewardPoints.mockResolvedValue(undefined);
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         WagerService,
@@ -69,7 +77,11 @@ describe('Wager Service', () => {
         },
       ],
     })
-      .useMocker(createMock)
+      .useMocker((token) => {
+        if (token === HelperService) return helper;
+
+        return createMock(token);
+      })
       .compile();
 
     wagerService = module.get<WagerService>(WagerService);
