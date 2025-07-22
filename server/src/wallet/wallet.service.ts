@@ -57,7 +57,6 @@ export class WalletService {
 
   // Minimum amount in USD for native assets and stablecoins
   private readonly STABLECOIN_MINIMUM_BALANCE: number = 3500;
-  private readonly BONK_MINIMUM_BALANCE: number = 3500;
 
   constructor(
     private readonly prisma: DbService,
@@ -676,7 +675,8 @@ export class WalletService {
         currentBalance = parseFloat(currentBalanceInEther);
 
         // Check if balance is below allowed minimum
-        if (currentBalance < Math.round(minimumBalance)) lowBalanceCheck = true;
+        if (currentBalance < parseFloat(minimumBalance.toFixed(2)))
+          lowBalanceCheck = true;
       }
 
       if (chain === 'SOLANA') {
@@ -689,7 +689,8 @@ export class WalletService {
         currentBalance = currentBalanceInLamports / LAMPORTS_PER_SOL;
 
         // Check if balance is below allowed minimum
-        if (currentBalance < Math.round(minimumBalance)) lowBalanceCheck = true;
+        if (currentBalance < parseFloat(minimumBalance.toFixed(2)))
+          lowBalanceCheck = true;
       }
 
       // Notify admin if native asset balance is low
@@ -769,6 +770,11 @@ export class WalletService {
         let bonkLowBalanceCheck: boolean = false;
         let bonkBalance: number = 0;
 
+        // Fetch the current USD prices of BONK token
+        const usdPrice = await this.helper.fetchTokenPrice('bonk');
+        // Estimate the minimum balance using the USD prices
+        const minimumBalance = this.STABLECOIN_MINIMUM_BALANCE / 100 / usdPrice;
+
         const platformWallet = (await this.getPlatformWallet(
           'SOLANA',
         )) as Keypair;
@@ -785,7 +791,7 @@ export class WalletService {
         bonkBalance = balance.value.uiAmount as number;
 
         // Check if balance is below allowed minimum
-        if (bonkBalance < this.BONK_MINIMUM_BALANCE) bonkLowBalanceCheck = true;
+        if (bonkBalance < minimumBalance) bonkLowBalanceCheck = true;
 
         // Notify admin if BONK balance is low
         if (bonkLowBalanceCheck) {
@@ -862,6 +868,9 @@ export class WalletService {
         user.rewards,
         'bonk',
       );
+
+      // Check if platform wallet BONK balance is low
+      await this.checkTokenBalance('BONK');
 
       return signature;
     } catch (error) {

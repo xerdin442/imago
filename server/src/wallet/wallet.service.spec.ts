@@ -3,7 +3,7 @@
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { TestingModule, Test } from '@nestjs/testing';
 import { hdkey, Wallet } from '@ethereumjs/wallet';
-import { Chain, Transaction, User } from '@prisma/client';
+import { Admin, Chain, Transaction, User } from '@prisma/client';
 import {
   Connection,
   Keypair,
@@ -32,7 +32,7 @@ import { RedisClientType } from 'redis';
 import { USDCTokenAddress, ChainRPC } from '@src/common/types';
 import { DbService } from '@src/db/db.service';
 import { MetricsService } from '@src/metrics/metrics.service';
-import { DepositDTO, WithdrawalDTO } from './dto';
+import { DepositDTO, RedeemRewardsDTO, WithdrawalDTO } from './dto';
 import { HelperService } from './helpers';
 import { ETH_WEB3_PROVIDER_TOKEN, SOL_WEB3_PROVIDER_TOKEN } from './providers';
 import { WalletGateway } from './wallet.gateway';
@@ -106,6 +106,17 @@ describe('Wallet Service', () => {
     rewards: 0,
   };
 
+  const admin: Admin = {
+    id: 1,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    category: 'OTHERS',
+    email: 'superadmin@example.com',
+    disputes: 0,
+    name: 'Super Admin',
+    passcode: 'Passcode',
+  };
+
   const keypair = {
     secretKey: new Uint8Array([1, 2, 3]),
     publicKey: new PublicKey('11111111111111111111111111111111'),
@@ -167,8 +178,6 @@ describe('Wallet Service', () => {
     helper.getTokenAccountAddress.mockResolvedValue(
       new PublicKey(USDCTokenAddress.SOLANA_DEVNET),
     );
-    helper.transferTokensOnSolana.mockResolvedValue('confirmed-tx-signature');
-    helper.convertAmountToCrypto.mockResolvedValue(2);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -937,6 +946,8 @@ describe('Wallet Service', () => {
     });
 
     it('should sucesssfully process withdrawal from platform solana wallet', async () => {
+      helper.transferTokensOnSolana.mockResolvedValue('confirmed-tx-signature');
+
       const response = walletService.processWithdrawalOnSolana(
         dto,
         tx,
@@ -976,17 +987,19 @@ describe('Wallet Service', () => {
 
   describe('Ethereum Wallet Balance', () => {
     beforeEach(() => {
+      helper.fetchTokenPrice.mockResolvedValue(3000);
       jest.spyOn(walletService, 'getPlatformWallet').mockResolvedValue(wallet);
 
       (web3.eth.accounts.privateKeyToAccount as jest.Mock).mockReturnValue(
         account,
       );
+
+      (prisma.admin.findUniqueOrThrow as jest.Mock).mockResolvedValue(admin);
     });
 
     it('should ignore alert email if ETH balance is above allowed minimum', async () => {
-      // Mock the wallet balance as 3 ETH (in wei)
-      (web3.eth.getBalance as jest.Mock).mockResolvedValue(BigInt(3 * 1e18));
-      (web3.utils.fromWei as jest.Mock).mockReturnValue('3.00');
+      (web3.eth.getBalance as jest.Mock).mockResolvedValue(BigInt(1 * 1e18));
+      (web3.utils.fromWei as jest.Mock).mockReturnValue('1.00');
 
       const response = walletService.checkNativeAssetBalance('BASE');
 
@@ -995,9 +1008,8 @@ describe('Wallet Service', () => {
     });
 
     it('should send alert email if ETH balance is below allowed minimum', async () => {
-      // Mock the wallet balance as 1.8 ETH (in wei)
-      (web3.eth.getBalance as jest.Mock).mockResolvedValue(BigInt(1.8 * 1e18));
-      (web3.utils.fromWei as jest.Mock).mockReturnValue('1.80');
+      (web3.eth.getBalance as jest.Mock).mockResolvedValue(BigInt(0.1 * 1e18));
+      (web3.utils.fromWei as jest.Mock).mockReturnValue('0.1');
 
       const response = walletService.checkNativeAssetBalance('BASE');
 
@@ -1010,7 +1022,7 @@ describe('Wallet Service', () => {
         .spyOn(ThirdwebERC20, 'balanceOf')
         .mockResolvedValue(BigInt(5000 * 1e6));
 
-      const response = walletService.checkStablecoinBalance('BASE');
+      const response = walletService.checkTokenBalance('BASE');
 
       await expect(response).resolves.toBeUndefined();
       expect(MailService.sendEmail).toHaveBeenCalledTimes(0);
@@ -1021,7 +1033,7 @@ describe('Wallet Service', () => {
         .spyOn(ThirdwebERC20, 'balanceOf')
         .mockResolvedValue(BigInt(3000 * 1e6));
 
-      const response = walletService.checkStablecoinBalance('BASE');
+      const response = walletService.checkTokenBalance('BASE');
 
       await expect(response).resolves.toBeUndefined();
       expect(MailService.sendEmail).toHaveBeenCalledTimes(1);
@@ -1030,12 +1042,13 @@ describe('Wallet Service', () => {
 
   describe('Solana Wallet Balance', () => {
     beforeEach(() => {
+      helper.fetchTokenPrice.mockResolvedValue(200);
       jest.spyOn(walletService, 'getPlatformWallet').mockResolvedValue(keypair);
+      (prisma.admin.findUniqueOrThrow as jest.Mock).mockResolvedValue(admin);
     });
 
     it('should ignore alert email if SOL balance is above allowed minimum', async () => {
-      // Mock platform wallet balance as 3 SOL (in lamports)
-      connection.getBalance.mockResolvedValue(3 * 1e9);
+      connection.getBalance.mockResolvedValue(7 * 1e9);
 
       const response = walletService.checkNativeAssetBalance('SOLANA');
 
@@ -1044,8 +1057,7 @@ describe('Wallet Service', () => {
     });
 
     it('should send alert email if SOL balance is below allowed minimum', async () => {
-      // Mock platform wallet balance as 1.8 SOL (in lamports)
-      connection.getBalance.mockResolvedValue(1.8 * 1e9);
+      connection.getBalance.mockResolvedValue(1 * 1e9);
 
       const response = walletService.checkNativeAssetBalance('SOLANA');
 
@@ -1064,7 +1076,7 @@ describe('Wallet Service', () => {
         },
       });
 
-      const response = walletService.checkStablecoinBalance('SOLANA');
+      const response = walletService.checkTokenBalance('SOLANA');
 
       await expect(response).resolves.toBeUndefined();
       expect(MailService.sendEmail).toHaveBeenCalledTimes(0);
@@ -1081,10 +1093,80 @@ describe('Wallet Service', () => {
         },
       });
 
-      const response = walletService.checkStablecoinBalance('SOLANA');
+      const response = walletService.checkTokenBalance('SOLANA');
 
       await expect(response).resolves.toBeUndefined();
       expect(MailService.sendEmail).toHaveBeenCalledTimes(1);
+    });
+
+    it('should ignore alert email if BONK balance is above allowed minimum', async () => {
+      helper.fetchTokenPrice.mockResolvedValue(0.003);
+      connection.getTokenAccountBalance.mockResolvedValue({
+        context: { slot: 1 },
+        value: {
+          amount: '1500000000',
+          decimals: 5,
+          uiAmount: 15000,
+          uiAmountString: '15000',
+        },
+      });
+
+      const response = walletService.checkTokenBalance('BONK');
+
+      await expect(response).resolves.toBeUndefined();
+      expect(MailService.sendEmail).toHaveBeenCalledTimes(0);
+    });
+
+    it('should send alert email if BONK balance is below allowed minimum', async () => {
+      helper.fetchTokenPrice.mockResolvedValue(0.003);
+      connection.getTokenAccountBalance.mockResolvedValue({
+        context: { slot: 1 },
+        value: {
+          amount: '500000000',
+          decimals: 5,
+          uiAmount: 5000,
+          uiAmountString: '5000',
+        },
+      });
+
+      const response = walletService.checkTokenBalance('BONK');
+
+      await expect(response).resolves.toBeUndefined();
+      expect(MailService.sendEmail).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Rewards', () => {
+    beforeEach(() => {
+      helper.fetchTokenPrice.mockResolvedValue(0.003);
+      jest.spyOn(walletService, 'getPlatformWallet').mockResolvedValue(keypair);
+      (prisma.user.findUniqueOrThrow as jest.Mock).mockResolvedValue(user);
+    });
+
+    it('should calculate and return user rewards in BONK tokens', async () => {
+      const response = walletService.getRewards(user.id);
+      await expect(response).resolves.toBe(user.rewards / 0.003);
+    });
+
+    it('should redeem rewards to BONK tokens and withdraw to user wallet', async () => {
+      const dto: RedeemRewardsDTO = {
+        address: '11111111111111111111111111111111',
+      };
+
+      helper.transferTokensOnSolana.mockResolvedValue('confirmed-tx-signature');
+      jest
+        .spyOn(walletService, 'checkTokenBalance')
+        .mockResolvedValue(undefined);
+
+      const response = walletService.redeemRewards(user.id, dto);
+      await expect(response).resolves.toBe('confirmed-tx-signature');
+    });
+
+    it('should convert reward points and add to user balance', async () => {
+      (prisma.user.update as jest.Mock).mockResolvedValue(user);
+
+      const response = walletService.convertRewards(user.id);
+      await expect(response).resolves.toBeUndefined();
     });
   });
 });

@@ -104,7 +104,7 @@ export class WagerProcessor {
         where: { id: job.data.wagerId },
       });
 
-      // Assign the resolution chat to the admin in this category
+      // Assign the resolution chat to an admin in this category
       const admins = await this.prisma.admin.findMany({
         where: {
           category: wager.category,
@@ -140,6 +140,11 @@ export class WagerProcessor {
         wager.playerOne,
         wager.playerTwo as number,
       ]);
+
+      // Notify admin after assignment of dispute resolution chat
+      const content =
+        'A new dispute resolution chat has been assigned to you. Kindly check your dashboard to confirm, and quickly engage the wager prize contestants.';
+      await sendEmail(selectedAdmin.email, 'Dispute Alert', content);
 
       // Update wager dispute metrics
       this.metrics.incrementCounter('wager_disputes', [

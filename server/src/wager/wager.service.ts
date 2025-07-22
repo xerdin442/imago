@@ -383,10 +383,17 @@ export class WagerService {
         },
       });
 
-      // Update dispute chat status
+      // Update dispute chat status and number of active disputes for admin
       await this.prisma.chat.update({
         where: { wagerId },
-        data: { status: 'CLOSED' },
+        data: {
+          status: 'CLOSED',
+          admin: {
+            update: {
+              disputes: { decrement: 1 },
+            },
+          },
+        },
       });
 
       // Subtract platform fee and add winnings to the winner's balance
