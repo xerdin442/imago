@@ -129,10 +129,13 @@ The database schema is located [here](prisma/schema.prisma). If no schema change
 
 ### Wallet API
 
-| Method | Path             | Description                    |
-| ------ | ---------------- | ------------------------------ |
-| POST   | /wallet/deposit  | Initiate deposit processing    |
-| POST   | /wallet/withdraw | Initiate withdrawal processing |
+| Method | Path                    | Description                                    |
+| ------ | ----------------------- | ---------------------------------------------- |
+| POST   | /wallet/deposit         | Initiate deposit processing                    |
+| POST   | /wallet/withdraw        | Initiate withdrawal processing                 |
+| GET    | /wallet/rewards         | Get user rewards in BONK tokens                |
+| POST   | /wallet/rewards/redeem  | Withdraw BONK token equivalent of user rewards |
+| GET    | /wallet/rewards/convert | Convert user rewards and add to wallet balance |
 
 ## Google Authentication
 

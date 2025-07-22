@@ -57,7 +57,7 @@ export class WalletService {
 
   // Minimum amount in USD for native assets and stablecoins
   private readonly STABLECOIN_MINIMUM_BALANCE: number = 3500;
-  private readonly REWARDS_RESERVE_MINIMUM_BALANCE: number = 3500;
+  private readonly BONK_MINIMUM_BALANCE: number = 3500;
 
   constructor(
     private readonly prisma: DbService,
@@ -651,11 +651,13 @@ export class WalletService {
       let symbol: string = '';
       chain === 'BASE' ? (symbol = 'ETH') : (symbol = 'SOL');
 
-      // Convert allowed minimum amount to crypto equivalent
-      const minimumBalance = await this.helper.convertAmountToCrypto(
-        this.STABLECOIN_MINIMUM_BALANCE / 4,
-        chain,
-      );
+      let coinId: string = '';
+      chain === 'BASE' ? (coinId = 'ethereum') : (coinId = 'solana');
+
+      // Fetch the current USD prices of the native assets
+      const usdPrice = await this.helper.fetchTokenPrice(coinId);
+      // Estimate the minimum balance of the assets using the USD prices
+      const minimumBalance = this.STABLECOIN_MINIMUM_BALANCE / 4 / usdPrice;
 
       if (chain === 'BASE') {
         const platformWallet = (await this.getPlatformWallet(chain)) as Wallet;
@@ -674,7 +676,7 @@ export class WalletService {
         currentBalance = parseFloat(currentBalanceInEther);
 
         // Check if balance is below allowed minimum
-        if (currentBalance < Math.ceil(minimumBalance)) lowBalanceCheck = true;
+        if (currentBalance < Math.round(minimumBalance)) lowBalanceCheck = true;
       }
 
       if (chain === 'SOLANA') {
@@ -687,7 +689,7 @@ export class WalletService {
         currentBalance = currentBalanceInLamports / LAMPORTS_PER_SOL;
 
         // Check if balance is below allowed minimum
-        if (currentBalance < Math.ceil(minimumBalance)) lowBalanceCheck = true;
+        if (currentBalance < Math.round(minimumBalance)) lowBalanceCheck = true;
       }
 
       // Notify admin if native asset balance is low
@@ -783,8 +785,7 @@ export class WalletService {
         bonkBalance = balance.value.uiAmount as number;
 
         // Check if balance is below allowed minimum
-        if (bonkBalance < this.REWARDS_RESERVE_MINIMUM_BALANCE)
-          bonkLowBalanceCheck = true;
+        if (bonkBalance < this.BONK_MINIMUM_BALANCE) bonkLowBalanceCheck = true;
 
         // Notify admin if BONK balance is low
         if (bonkLowBalanceCheck) {
@@ -792,11 +793,11 @@ export class WalletService {
             where: { id: 1 },
           });
 
-          const content = `The platform wallet has a rewards reserve balance of ${currentBalance} BONK.`;
+          const content = `The platform wallet has a BONK balance of ${currentBalance} BONK.`;
           await sendEmail(admin.email, 'Low Balance Alert', content);
 
           logger.warn(
-            `[${this.context}] The platform wallet has a low rewards reserve balance. Balance: ${currentBalance} BONK.\n`,
+            `[${this.context}] The platform wallet has a low BONK balance. Balance: ${currentBalance} BONK.\n`,
           );
 
           return;
@@ -833,8 +834,12 @@ export class WalletService {
         where: { id: userId },
       });
 
-      const rewards = await this.helper.calculateOnchainRewards(user.rewards);
-      return rewards;
+      // Fetch the current USD prices of the native assets
+      const usdPrice = await this.helper.fetchTokenPrice('bonk');
+      // Calculate onchain rewards
+      const bonkValue = user.rewards / usdPrice;
+
+      return parseFloat(bonkValue.toFixed(2));
     } catch (error) {
       throw error;
     }

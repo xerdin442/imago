@@ -10,12 +10,13 @@ import {
   WagerInviteDTO,
 } from './dto';
 import { DbService } from '@src/db/db.service';
-import { calculatePlatformFee } from './helpers';
+import { HelperService } from './helpers';
 
 @Injectable()
 export class WagerService {
   constructor(
     private readonly prisma: DbService,
+    private readonly helper: HelperService,
     @InjectQueue('wager-queue') private readonly wagersQueue: Queue,
   ) {}
 
@@ -275,14 +276,18 @@ export class WagerService {
       });
 
       // Subtract platform fee and add winnings to winner's balance
+      const winnings =
+        wager.amount - this.helper.calculatePlatformFee(wager.amount);
+
       await this.prisma.user.update({
         where: { id: wager.winner as number },
         data: {
-          balance: {
-            increment: wager.amount - calculatePlatformFee(wager.amount),
-          },
+          balance: { increment: winnings },
         },
       });
+
+      // Update winner reward points
+      await this.helper.updateRewardPoints(wager.winner as number, winnings);
 
       return;
     } catch (error) {
@@ -385,14 +390,20 @@ export class WagerService {
       });
 
       // Subtract platform fee and add winnings to the winner's balance
+      const winnings =
+        wager.amount - this.helper.calculatePlatformFee(wager.amount);
+
       await this.prisma.user.update({
         where: { username: dto.username },
         data: {
-          balance: {
-            increment: wager.amount - calculatePlatformFee(wager.amount),
-          },
+          balance: { increment: winnings },
         },
       });
+
+      // Update the winner's reward points
+      await this.helper.updateRewardPoints(user.id, winnings);
+
+      return;
     } catch (error) {
       throw error;
     }
