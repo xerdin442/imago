@@ -135,7 +135,7 @@ The database schema is located [here](prisma/schema.prisma). If no schema change
 | POST   | /wallet/withdraw        | Initiate withdrawal processing                 |
 | GET    | /wallet/rewards         | Get user rewards in BONK tokens                |
 | POST   | /wallet/rewards/redeem  | Withdraw BONK token equivalent of user rewards |
-| GET    | /wallet/rewards/convert | Convert user rewards and add to wallet balance |
+| POST   | /wallet/rewards/convert | Convert reward points and add to user balance  |
 
 ## Google Authentication
 
