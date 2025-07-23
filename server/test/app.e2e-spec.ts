@@ -14,7 +14,7 @@ import {
 } from '../src/auth/dto';
 import { AdminAuthDTO, CreateAdminDTO } from '../src/admin/dto';
 import { FundsTransferDTO, UpdateProfileDTO } from '../src/user/dto';
-import { DepositDTO, WithdrawalDTO } from '../src/wallet/dto';
+import { DepositDTO, RedeemRewardsDTO, WithdrawalDTO } from '../src/wallet/dto';
 import {
   CreateWagerDTO,
   UpdateWagerDTO,
@@ -975,50 +975,83 @@ describe('E2E Tests', () => {
       expect(response.body).toHaveProperty('rewards');
     });
 
-    it('should throw if user attempts to redeem rewards with invalid or unregistered SNS domain', async () => {
-      const response = await request(app.getHttpServer())
-        .post('/wallet/rewards/redeem')
-        .set('Authorization', `Bearer ${userOneToken}`)
-        .send({ address: 'xerdin442.sol' });
+    describe('Redeem Rewards', () => {
+      const dto: RedeemRewardsDTO = {
+        address: '3BrAsMnKo7WVvFSVYRJF1JDKDuxZ2FaAorMzMM5t8VCt',
+      };
 
-      expect(response.status).toEqual(400);
-      expect(response.body).toHaveProperty('message');
-      expect(response.body.message).toEqual(
-        'Invalid or unregistered SNS domain',
-      );
+      it('should throw if user attempts to redeem rewards with invalid or unregistered SNS domain', async () => {
+        const response = await request(app.getHttpServer())
+          .post('/wallet/rewards/redeem')
+          .set('Authorization', `Bearer ${userOneToken}`)
+          .send({ address: 'xerdin442.sol' });
+
+        expect(response.status).toEqual(400);
+        expect(response.body).toHaveProperty('message');
+        expect(response.body.message).toEqual(
+          'Invalid or unregistered SNS domain',
+        );
+      });
+
+      it('should throw if user attempts to redeem rewards with invalid address', async () => {
+        const response = await request(app.getHttpServer())
+          .post('/wallet/rewards/redeem')
+          .set('Authorization', `Bearer ${userOneToken}`)
+          .send({ address: 'invalid-recipient-address' });
+
+        expect(response.status).toEqual(400);
+        expect(response.body).toHaveProperty('message');
+        expect(response.body.message).toEqual('Invalid recipient address');
+      });
+
+      it('should throw if user has less than the minimum points to redeem rewards', async () => {
+        const response = await request(app.getHttpServer())
+          .post('/wallet/rewards/redeem')
+          .set('Authorization', `Bearer ${userTwoToken}`)
+          .send(dto);
+
+        expect(response.status).toEqual(400);
+        expect(response.body).toHaveProperty('message');
+        expect(response.body.message).toEqual(
+          'You need a minimum of 5 points before you can redeem your rewards',
+        );
+      });
+
+      it('should redeem reward points and withdraw to user wallet', async () => {
+        const response = await request(app.getHttpServer())
+          .post('/wallet/rewards/redeem')
+          .set('Authorization', `Bearer ${userOneToken}`)
+          .send(dto);
+
+        expect(response.status).toEqual(200);
+        expect(response.body).toHaveProperty('message');
+      });
     });
 
-    it('should throw if user attempts to redeem rewards with invalid address', async () => {
-      const response = await request(app.getHttpServer())
-        .post('/wallet/rewards/redeem')
-        .set('Authorization', `Bearer ${userOneToken}`)
-        .send({ address: 'invalid-recipient-address' });
+    describe('Convert Rewards', () => {
+      it('should throw if user has less than the minimum points to redeem rewards', async () => {
+        const response = await request(app.getHttpServer())
+          .post('/wallet/rewards/convert')
+          .set('Authorization', `Bearer ${userTwoToken}`);
 
-      expect(response.status).toEqual(400);
-      expect(response.body).toHaveProperty('message');
-      expect(response.body.message).toEqual('Invalid recipient address');
-    });
+        expect(response.status).toEqual(400);
+        expect(response.body).toHaveProperty('message');
+        expect(response.body.message).toEqual(
+          'You need a minimum of 3.5 points before you can convert your rewards',
+        );
+      });
 
-    it('should redeem reward points and withdraw to user wallet', async () => {
-      const response = await request(app.getHttpServer())
-        .post('/wallet/rewards/redeem')
-        .set('Authorization', `Bearer ${userOneToken}`)
-        .send({ address: '3BrAsMnKo7WVvFSVYRJF1JDKDuxZ2FaAorMzMM5t8VCt' });
+      it('should convert reward points and add to user balance', async () => {
+        const response = await request(app.getHttpServer())
+          .post('/wallet/rewards/convert')
+          .set('Authorization', `Bearer ${userOneToken}`);
 
-      expect(response.status).toEqual(200);
-      expect(response.body).toHaveProperty('message');
-    });
-
-    it('should convert reward points and add to user balance', async () => {
-      const response = await request(app.getHttpServer())
-        .post('/wallet/rewards/convert')
-        .set('Authorization', `Bearer ${userOneToken}`);
-
-      expect(response.status).toEqual(200);
-      expect(response.body).toHaveProperty('message');
-      expect(response.body.message).toEqual(
-        'Your rewards have been converted and added to your balance',
-      );
+        expect(response.status).toEqual(200);
+        expect(response.body).toHaveProperty('message');
+        expect(response.body.message).toEqual(
+          'Your rewards have been converted and added to your balance',
+        );
+      });
     });
   });
 

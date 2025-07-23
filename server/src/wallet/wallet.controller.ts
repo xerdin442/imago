@@ -243,6 +243,13 @@ export class WalletController {
         throw new BadRequestException('Invalid recipient address');
       }
 
+      // Check if user has the minimum number of reward points
+      if (user.rewards < 5) {
+        throw new BadRequestException(
+          'You need a minimum of 5 points before you can redeem your rewards',
+        );
+      }
+
       // Redeem user rewards
       const signature = await this.walletService.redeemRewards(user.id, dto);
 
@@ -262,6 +269,13 @@ export class WalletController {
   @HttpCode(HttpStatus.OK)
   async convertRewards(@GetUser() user: User): Promise<{ message: string }> {
     try {
+      // Check if user has the minimum number of reward points
+      if (user.rewards < 3.5) {
+        throw new BadRequestException(
+          'You need a minimum of 3.5 points before you can convert your rewards',
+        );
+      }
+
       await this.walletService.convertRewards(user.id);
 
       return {
