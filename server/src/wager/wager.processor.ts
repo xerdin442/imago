@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { DbService } from '@src/db/db.service';
 import { MetricsService } from '@src/metrics/metrics.service';
 import { Job } from 'bull';
-import { calculatePlatformFee } from './helpers';
+import { HelperService } from './helpers';
 import { WagerGateway } from './wager.gateway';
 import { sendEmail } from '@src/common/config/mail';
 import logger from '@src/common/logger';
@@ -21,6 +21,7 @@ export class WagerProcessor {
 
   constructor(
     private readonly prisma: DbService,
+    private readonly helper: HelperService,
     private readonly metrics: MetricsService,
     private readonly gateway: WagerGateway,
   ) {}
@@ -62,14 +63,18 @@ export class WagerProcessor {
       });
 
       // Subtract platform fee and add winnings to the claimant's balance
+      const winnings =
+        wager.amount - this.helper.calculatePlatformFee(wager.amount);
+
       const claimant = await this.prisma.user.update({
         where: { id: claimantId },
         data: {
-          balance: {
-            increment: wager.amount - calculatePlatformFee(wager.amount),
-          },
+          balance: { increment: winnings },
         },
       });
+
+      // Update the claimant's reward points
+      await this.helper.updateRewardPoints(claimantId, winnings);
 
       const opponent = await this.prisma.user.findUniqueOrThrow({
         where: { id: opponentId },
@@ -99,7 +104,7 @@ export class WagerProcessor {
         where: { id: job.data.wagerId },
       });
 
-      // Assign the resolution chat to the admin in this category
+      // Assign the resolution chat to an admin in this category
       const admins = await this.prisma.admin.findMany({
         where: {
           category: wager.category,
@@ -135,6 +140,11 @@ export class WagerProcessor {
         wager.playerOne,
         wager.playerTwo as number,
       ]);
+
+      // Notify admin after assignment of dispute resolution chat
+      const content =
+        'A new dispute resolution chat has been assigned to you. Kindly check your dashboard to confirm, and quickly engage the wager prize contestants.';
+      await sendEmail(selectedAdmin.email, 'Dispute Alert', content);
 
       // Update wager dispute metrics
       this.metrics.incrementCounter('wager_disputes', [

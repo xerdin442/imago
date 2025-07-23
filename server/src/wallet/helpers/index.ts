@@ -50,13 +50,19 @@ export class HelperService {
     return address;
   }
 
-  async getTokenAccountAddress(owner: PublicKey): Promise<PublicKey> {
+  async getTokenAccountAddress(
+    owner: PublicKey,
+    token: 'usdc' | 'bonk',
+  ): Promise<PublicKey> {
     try {
-      return getAssociatedTokenAddress(
-        new PublicKey(this.selectUSDCTokenAddress('SOLANA')),
-        owner,
-        true,
-      );
+      let tokenAddress: PublicKey;
+      token === 'usdc'
+        ? (tokenAddress = new PublicKey(this.selectUSDCTokenAddress('SOLANA')))
+        : (tokenAddress = new PublicKey(
+            'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
+          ));
+
+      return getAssociatedTokenAddress(tokenAddress, owner, true);
     } catch (error) {
       throw error;
     }
@@ -67,14 +73,18 @@ export class HelperService {
     sender: Keypair,
     recipient: PublicKey,
     amount: number,
+    token: 'usdc' | 'bonk',
   ): Promise<string> {
     try {
       // Get the token account addresses of platform wallet and recipient address
       const senderTokenAddress = await this.getTokenAccountAddress(
         sender.publicKey,
+        token,
       );
-      const recipientTokenAddress =
-        await this.getTokenAccountAddress(recipient);
+      const recipientTokenAddress = await this.getTokenAccountAddress(
+        recipient,
+        token,
+      );
 
       // Initiate transfer of USDC tokens from platform wallet
       const signature = await transfer(
@@ -112,11 +122,8 @@ export class HelperService {
     return decodedBytes.length === 64;
   }
 
-  async convertAmountToCrypto(amount: number, chain: Chain): Promise<number> {
+  async fetchTokenPrice(coinId: string): Promise<number> {
     try {
-      let coinId: string = '';
-      chain === 'BASE' ? (coinId = 'ethereum') : (coinId = 'solana');
-
       const response = await axios.get(
         `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd`,
         {
@@ -127,12 +134,7 @@ export class HelperService {
         },
       );
 
-      let usdPrice: number = 0;
-      chain === 'BASE'
-        ? (usdPrice = response.data.ethereum.usd as number)
-        : (usdPrice = response.data.solana.usd as number);
-
-      return amount / usdPrice;
+      return response.data[coinId].usd as number;
     } catch (error) {
       throw error;
     }

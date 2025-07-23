@@ -36,3 +36,9 @@ export class WithdrawalDTO {
   @IsNotEmpty()
   chain: Chain;
 }
+
+export class RedeemRewardsDTO {
+  @IsString()
+  @IsNotEmpty()
+  address: string;
+}

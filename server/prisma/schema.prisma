@@ -61,6 +61,7 @@ model User {
   twoFASecret  String?
   twoFAEnabled Boolean @default(false)
   balance      Int     @default(0)
+  rewards      Float   @default(0)
 
   transactions Transaction[]
 

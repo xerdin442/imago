@@ -4,6 +4,7 @@ import { WagerService } from './wager.service';
 import { WagerGateway } from './wager.gateway';
 import { WagerProcessor } from './wager.processor';
 import { BullModule } from '@nestjs/bull';
+import { HelperService } from './helpers';
 
 @Module({
   imports: [
@@ -12,6 +13,6 @@ import { BullModule } from '@nestjs/bull';
     }),
   ],
   controllers: [WagerController],
-  providers: [WagerService, WagerGateway, WagerProcessor],
+  providers: [WagerService, HelperService, WagerGateway, WagerProcessor],
 })
 export class WagerModule {}
