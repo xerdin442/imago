@@ -450,11 +450,11 @@ describe('E2E Tests', () => {
 
   describe('Deposit', () => {
     const dto: DepositDTO = {
-      amount: 10,
+      amount: 7,
       chain: 'BASE',
-      depositor: '0x6c6fD71806E6E5B16afB119628966E0AF24a3E6F',
+      depositor: '0xb781Dd91EbdD6a63680b1f9e255a2F0a11E82d1D',
       txIdentifier:
-        '0x39046319e2d4b467539475f04b50ec50437601529aef98dd3270ce16e942aca2',
+        '0xda2e9b25e1537e89033e8636f00d9dfd70f127a3bb40e69175849aec82371288',
     };
 
     it('should throw if chain is invalid', async () => {
@@ -510,11 +510,11 @@ describe('E2E Tests', () => {
 
     describe('SOLANA', () => {
       const solanaDto: DepositDTO = {
-        amount: 10,
+        amount: 12,
         chain: 'SOLANA',
-        depositor: 'FNHYDHQubHyq9Y5qt9jKWFx9qvnQgUzDxzRnJoRRzwnL',
+        depositor: '3BrAsMnKo7WVvFSVYRJF1JDKDuxZ2FaAorMzMM5t8VCt',
         txIdentifier:
-          'TZEfx8RRXmTve21DM68EWzDGQdPU3zXdLJLmXwwwCsH5LGaVDSAfB9ixpLRAtjY4d4t6diigQ53NXoapwkmo4kE',
+          '28gotW8cJVCJeot8eyGDuNDE7tjzUuiQG3LMN6mVdSNqKicM75fC2rjBFSMoJmciaL8DG6BCK1sziqQ2a2XadJGL',
       };
 
       it('should throw if transaction identifier is invalid', async () => {
@@ -962,6 +962,63 @@ describe('E2E Tests', () => {
           `Your withdrawal of ${solanaDto.amount} is being processed`,
         );
       });
+    });
+  });
+
+  describe('Rewards', () => {
+    it('should return user rewards in BONK tokens', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/wallet/rewards')
+        .set('Authorization', `Bearer ${userOneToken}`);
+
+      expect(response.status).toEqual(200);
+      expect(response.body).toHaveProperty('rewards');
+    });
+
+    it('should throw if user attempts to redeem rewards with invalid or unregistered SNS domain', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/wallet/rewards/redeem')
+        .set('Authorization', `Bearer ${userOneToken}`)
+        .send({ address: 'xerdin442.sol' });
+
+      expect(response.status).toEqual(400);
+      expect(response.body).toHaveProperty('message');
+      expect(response.body.message).toEqual(
+        'Invalid or unregistered SNS domain',
+      );
+    });
+
+    it('should throw if user attempts to redeem rewards with invalid address', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/wallet/rewards/redeem')
+        .set('Authorization', `Bearer ${userOneToken}`)
+        .send({ address: 'invalid-recipient-address' });
+
+      expect(response.status).toEqual(400);
+      expect(response.body).toHaveProperty('message');
+      expect(response.body.message).toEqual('Invalid recipient address');
+    });
+
+    it('should redeem reward points and withdraw to user wallet', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/wallet/rewards/redeem')
+        .set('Authorization', `Bearer ${userOneToken}`)
+        .send({ address: '3BrAsMnKo7WVvFSVYRJF1JDKDuxZ2FaAorMzMM5t8VCt' });
+
+      expect(response.status).toEqual(200);
+      expect(response.body).toHaveProperty('message');
+    });
+
+    it('should convert reward points and add to user balance', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/wallet/rewards/convert')
+        .set('Authorization', `Bearer ${userOneToken}`);
+
+      expect(response.status).toEqual(200);
+      expect(response.body).toHaveProperty('message');
+      expect(response.body.message).toEqual(
+        'Your rewards have been converted and added to your balance',
+      );
     });
   });
 

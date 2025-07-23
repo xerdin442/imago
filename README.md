@@ -17,7 +17,7 @@ This is a stablecoin-powered wagering application that enables users create and 
 
 - **Multi-Player Contests**: Multi-player prize contests for games such as Call of Duty Mobile and Fantasy Premier League (FPL). Also, adding support for creating multi-player prize tournaments in football games (such as EA FC or eFootball).
 - **Savings**: Feature to enable auto-save on winnings. The savings will be staked onchain, and yields will be accumulated to grow the user's balance over time.
-- **Rewards**: Converting current reward ssytem to an onchain system to use NFTs or SFTs
+- **Rewards**: Converting the current reward system to an onchain system using NFTs or SFTs.
 
 ## Demo
 
