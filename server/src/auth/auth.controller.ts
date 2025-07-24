@@ -32,8 +32,8 @@ import { Request, Response } from 'express';
 import { randomBytes, randomUUID } from 'crypto';
 import { AuthService } from './auth.service';
 import {
-  GoogleAuthPayload,
-  GoogleAuthUser,
+  SocialAuthPayload,
+  SocialAuthUser,
   SessionData,
 } from '@src/common/types';
 import { generateCallbackHtml } from './helpers';
@@ -79,7 +79,7 @@ export class AuthController {
     }),
   )
   async signup(
-    @Body() dto: SignupDTO | GoogleAuthPayload,
+    @Body() dto: SignupDTO | SocialAuthPayload,
     @UploadedFile() file?: Express.Multer.File,
   ): Promise<{ user: User; token: string }> {
     try {
@@ -138,7 +138,7 @@ export class AuthController {
     );
 
     try {
-      const authenticatedUser = req.user as GoogleAuthUser;
+      const authenticatedUser = req.user as SocialAuthUser;
 
       if (!authenticatedUser || !authenticatedUser.token) {
         res.clearCookie(this.GOOGLE_REDIRECT_COOKIE_KEY);
@@ -177,7 +177,7 @@ export class AuthController {
   @Get('google/details')
   async getGoogleAuthDetails(
     @Query('googleAuth') identifier: string,
-  ): Promise<{ details: GoogleAuthUser }> {
+  ): Promise<{ details: SocialAuthUser }> {
     const redis: RedisClientType = await connectToRedis(
       Secrets.REDIS_URL,
       'Google Authentication',
@@ -190,13 +190,16 @@ export class AuthController {
         throw new BadRequestException('Invalid Google Auth identifier');
       }
 
-      return { details: JSON.parse(data) as GoogleAuthUser };
+      return { details: JSON.parse(data) as SocialAuthUser };
     } catch (error) {
       throw error;
     } finally {
       redis.destroy();
     }
   }
+
+  @Post('apple/callback')
+  async signInWithApple() {}
 
   @HttpCode(HttpStatus.OK)
   @UseGuards(AuthGuard('jwt'))
