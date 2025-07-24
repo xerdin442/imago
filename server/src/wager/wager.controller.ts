@@ -89,22 +89,6 @@ export class WagerController {
     }
   }
 
-  @Get(':wagerId')
-  @UseGuards(AuthGuard('jwt'))
-  async getWagerDetails(
-    @Param('wagerId', ParseIntPipe) wagerId: number,
-  ): Promise<{ wager: Wager }> {
-    try {
-      return { wager: await this.wagerService.getWagerDetails(wagerId) };
-    } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while retrieving wager details. Error: ${error.message}.\n`,
-      );
-
-      throw error;
-    }
-  }
-
   @Get('marketplace')
   @UseGuards(AuthGuard('jwt'))
   async populateWagerMarketplace(
@@ -142,6 +126,22 @@ export class WagerController {
     }
   }
 
+  @Get(':wagerId')
+  @UseGuards(AuthGuard('jwt'))
+  async getWagerDetails(
+    @Param('wagerId', ParseIntPipe) wagerId: number,
+  ): Promise<{ wager: Wager }> {
+    try {
+      return { wager: await this.wagerService.getWagerDetails(wagerId) };
+    } catch (error) {
+      logger.error(
+        `[${this.context}] An error occurred while retrieving wager details. Error: ${error.message}.\n`,
+      );
+
+      throw error;
+    }
+  }
+
   @Post(':wagerId/join')
   @UseGuards(AuthGuard('jwt'))
   @HttpCode(HttpStatus.OK)
@@ -153,7 +153,7 @@ export class WagerController {
       const wagerTitle = await this.wagerService.joinWager(user.id, wagerId);
 
       logger.info(
-        `[${this.context}] ${user.email} joined ${wagerTitle} wager.\n`,
+        `[${this.context}] ${user.email} joined "${wagerTitle}" wager.\n`,
       );
 
       return { message: 'Successfully joined wager' };
@@ -177,7 +177,7 @@ export class WagerController {
       const wagerTitle = await this.wagerService.claimWager(user.id, wagerId);
 
       logger.info(
-        `[${this.context}] ${user.email} claimed the prize in ${wagerTitle} wager.\n`,
+        `[${this.context}] ${user.email} claimed the prize in "${wagerTitle}" wager.\n`,
       );
 
       return {

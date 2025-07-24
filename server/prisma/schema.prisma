@@ -60,7 +60,7 @@ model User {
   username     String  @unique
   twoFASecret  String?
   twoFAEnabled Boolean @default(false)
-  balance      Int     @default(0)
+  balance      Float   @default(0)
   rewards      Float   @default(0)
 
   transactions Transaction[]
@@ -144,7 +144,7 @@ model Transaction {
   type         TransactionType
   chain        Chain
   status       TransactionStatus
-  amount       Int
+  amount       Float
   retries      Int               @default(0)
 
   userId Int

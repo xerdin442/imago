@@ -43,8 +43,8 @@ export class HelperService {
 
   async updateRewardPoints(userId: number, winnings: number): Promise<void> {
     try {
-      // Calculate reward points (1.5% of winnings)
-      const rewardPoints = winnings * 0.015;
+      // Calculate reward points (1% of winnings)
+      const rewardPoints = winnings * 0.01;
 
       // Update user rewards with a maximum of 125 points
       await this.prisma.user.update({

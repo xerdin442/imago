@@ -41,7 +41,7 @@ Clone this repository and follow the instructions to set up the project locally:
 The database schema is located [here](prisma/schema.prisma). If no schema changes are needed, move to the next step. If you make changes to the schema, follow these steps to run migrations locally:
 
 - Start the database container: `npm run compose:db` (**ensure Docker Desktop is running!**)
-- Apply the migrations: `npm run migrate:local`
+- Apply the migrations: `npm run migrate`
 
 ### 4. Initialization
 

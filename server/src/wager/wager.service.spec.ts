@@ -185,7 +185,7 @@ describe('Wager Service', () => {
     });
   });
 
-  describe('Find Wager by Invite Code', () => {
+  describe('Wager Invite', () => {
     it('should throw if invite code is invalid', async () => {
       (prisma.wager.findUnique as jest.Mock).mockResolvedValue(null);
 
@@ -195,6 +195,20 @@ describe('Wager Service', () => {
 
       await expect(response).rejects.toBeInstanceOf(BadRequestException);
       await expect(response).rejects.toThrow('Invalid wager invite code');
+    });
+
+    it('should throw if wager is already active', async () => {
+      (prisma.wager.findUnique as jest.Mock).mockResolvedValue({
+        ...wager,
+        status: 'ACTIVE',
+      });
+
+      const response = wagerService.findWagerByInviteCode({
+        inviteCode: 'WrongCode',
+      });
+
+      await expect(response).rejects.toBeInstanceOf(BadRequestException);
+      await expect(response).rejects.toThrow('This wager is already active');
     });
 
     it('should return wager details using valid invite code', async () => {

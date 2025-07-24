@@ -648,7 +648,7 @@ describe('E2E Tests', () => {
     it('should populate wager marketplace with pending wagers created by other players', async () => {
       const response = await request(app.getHttpServer())
         .get(`/wagers/marketplace`)
-        .set('Authorization', `Bearer ${userOneToken}`);
+        .set('Authorization', `Bearer ${userTwoToken}`);
 
       expect(response.status).toEqual(200);
       expect(response.body).toHaveProperty('wagers');

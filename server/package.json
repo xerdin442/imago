@@ -1,13 +1,12 @@
 {
-  "name": "wager-app-mono",
+  "name": "imago",
   "version": "0.0.1",
   "description": "",
   "author": "",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "migrate": "prisma migrate dev --name init",
-    "migrate:local": "npx dotenv -e .env.local -- npm run migrate",
+    "migrate": "npx dotenv -e .env.local -- prisma migrate dev --name init",
     "deploy": "prisma migrate deploy",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",

@@ -118,6 +118,10 @@ export class WagerService {
         throw new BadRequestException('Invalid wager invite code');
       }
 
+      if (wager.status === 'ACTIVE') {
+        throw new BadRequestException('This wager is already active');
+      }
+
       return wager;
     } catch (error) {
       throw error;
