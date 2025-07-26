@@ -35,12 +35,14 @@ import {
   SocialAuthPayload,
   SocialAuthUser,
   SessionData,
+  AppleAuthDTO,
 } from '@src/common/types';
 import { generateCallbackHtml } from './helpers';
 import logger from '@src/common/logger';
 import { RedisClientType } from 'redis';
 import { connectToRedis } from '@src/common/config/redis';
 import { Secrets } from '@src/common/secrets';
+import { AppleAuthHandler } from '@src/common/apple';
 
 @Controller('auth')
 export class AuthController {
@@ -50,7 +52,10 @@ export class AuthController {
   private readonly GOOGLE_REDIRECT_COOKIE_KEY: string =
     'google_auth_redirect_url';
 
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly appleAuthHandler: AppleAuthHandler,
+  ) {}
 
   @Post('signup')
   @UseInterceptors(
@@ -133,8 +138,8 @@ export class AuthController {
   ): Promise<void> {
     const redis: RedisClientType = await connectToRedis(
       Secrets.REDIS_URL,
-      'Google Authentication',
-      Secrets.GOOGLE_AUTH_STORE_INDEX,
+      'Social Authentication',
+      Secrets.SOCIAL_AUTH_STORE_INDEX,
     );
 
     try {
@@ -150,7 +155,7 @@ export class AuthController {
         (req.cookies?.[this.GOOGLE_REDIRECT_COOKIE_KEY] as string) || '/';
       const identifier = randomUUID();
 
-      // Store authentication details for retrieval by client
+      // Store social authentication details for retrieval by client
       await redis.setEx(
         identifier,
         3600,
@@ -163,7 +168,7 @@ export class AuthController {
         `script-src 'self' 'nonce-${nonce}'`,
       );
 
-      // Return authentication success page
+      // Return social authentication success page
       res
         .status(HttpStatus.OK)
         .send(generateCallbackHtml(identifier, redirectUrl, nonce));
@@ -174,20 +179,87 @@ export class AuthController {
     }
   }
 
-  @Get('google/details')
-  async getGoogleAuthDetails(
-    @Query('googleAuth') identifier: string,
+  @Get('apple')
+  appleLogin(
+    @Query('redirectUrl') redirectUrl: string,
+    @Res() res: Response,
+  ): void {
+    try {
+      const appleAuthUrl = new URL('https://appleid.apple.com/auth/authorize');
+      appleAuthUrl.searchParams.set('response_type', 'code id_token');
+      appleAuthUrl.searchParams.set('response_mode', 'form_post');
+      appleAuthUrl.searchParams.set('client_id', Secrets.APPLE_CLIENT_ID);
+      appleAuthUrl.searchParams.set('redirect_uri', Secrets.APPLE_CALLBACK_URL);
+      appleAuthUrl.searchParams.set('scope', 'name email');
+      appleAuthUrl.searchParams.set('state', redirectUrl);
+
+      return res.redirect(appleAuthUrl.toString());
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  @Post('apple/callback')
+  async appleCallback(
+    @Body() dto: AppleAuthDTO,
+    @Res() res: Response,
+  ): Promise<void> {
+    const redis: RedisClientType = await connectToRedis(
+      Secrets.REDIS_URL,
+      'Social Authentication',
+      Secrets.SOCIAL_AUTH_STORE_INDEX,
+    );
+
+    try {
+      const payload = await this.appleAuthHandler.verifyIdToken(dto.id_token);
+      const authenticatedUser = await this.appleAuthHandler.authenticateUser(
+        payload,
+        dto,
+      );
+
+      const nonce = randomBytes(16).toString('base64');
+      const identifier = randomUUID();
+      // Extract the redirect URL from the 'state' parameter in the authorization URL
+      const redirectUrl = dto.state.trim();
+
+      // Store social authentication details for retrieval by client
+      await redis.setEx(
+        identifier,
+        3600,
+        JSON.stringify({ ...authenticatedUser }),
+      );
+
+      // Add CSP header to protect against cross-site origin attacks
+      res.setHeader(
+        'Content-Security-Policy',
+        `script-src 'self' 'nonce-${nonce}'`,
+      );
+
+      // Return social authentication success page
+      res
+        .status(HttpStatus.OK)
+        .send(generateCallbackHtml(identifier, redirectUrl, nonce));
+    } catch (error) {
+      throw error;
+    } finally {
+      redis.destroy();
+    }
+  }
+
+  @Get('social/details')
+  async getSocialAuthDetails(
+    @Query('socialAuth') identifier: string,
   ): Promise<{ details: SocialAuthUser }> {
     const redis: RedisClientType = await connectToRedis(
       Secrets.REDIS_URL,
-      'Google Authentication',
-      Secrets.GOOGLE_AUTH_STORE_INDEX,
+      'Social Authentication',
+      Secrets.SOCIAL_AUTH_STORE_INDEX,
     );
 
     try {
       const data = await redis.get(identifier);
       if (!data) {
-        throw new BadRequestException('Invalid Google Auth identifier');
+        throw new BadRequestException('Invalid social auth identifier');
       }
 
       return { details: JSON.parse(data) as SocialAuthUser };
@@ -197,9 +269,6 @@ export class AuthController {
       redis.destroy();
     }
   }
-
-  @Post('apple/callback')
-  async signInWithApple() {}
 
   @HttpCode(HttpStatus.OK)
   @UseGuards(AuthGuard('jwt'))

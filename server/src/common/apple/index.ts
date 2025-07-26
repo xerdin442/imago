@@ -12,8 +12,8 @@ import { AuthService } from '@src/auth/auth.service';
 import logger from '../logger';
 
 @Injectable()
-export class AppleAuthService {
-  private readonly context: string = AppleAuthService.name;
+export class AppleAuthHandler {
+  private readonly context: string = AppleAuthHandler.name;
 
   private readonly client = jwksClient({
     jwksUri: 'https://appleid.apple.com/auth/oauth2/v2/keys',
@@ -103,6 +103,10 @@ export class AppleAuthService {
         }
       }
     } catch (error) {
+      logger.error(
+        `[${this.context}] An error occurred while validating Apple authentication credentials. Error: ${error.message}\n`,
+      );
+
       throw error;
     }
   }

@@ -9,7 +9,7 @@ import { MetricsService } from '@src/metrics/metrics.service';
 import { SessionService } from '@src/common/session';
 import { AuthProcessor } from './auth.processor';
 import { GoogleStrategy } from '@src/common/strategy/google.strategy';
-import { AppleAuthService } from '@src/common/apple';
+import { AppleAuthHandler } from '@src/common/apple';
 
 @Module({
   imports: [
@@ -29,7 +29,7 @@ import { AppleAuthService } from '@src/common/apple';
     SessionService,
     AuthProcessor,
     GoogleStrategy,
-    AppleAuthService,
+    AppleAuthHandler,
   ],
 })
 export class AuthModule {}

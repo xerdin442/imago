@@ -21,7 +21,7 @@ export function generateCallbackHtml(
   const scriptContent = `
     const returnButton = document.getElementById("return-button");    
     returnButton.addEventListener("click", () => {
-      window.location.href = "${redirectUrl}?googleAuth=${identifier}";
+      window.location.href = "${redirectUrl}?socialAuth=${identifier}";
     });
   `;
 
