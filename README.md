@@ -5,7 +5,7 @@ This is a stablecoin-powered wagering application that enables users create and 
 ## Features
 
 - **User Authentication**: Secure user authentication system - with an option to enable 2FA for added security - and role-based access control for users and admins.
-- **Social Authentication**: Google authentication for quicker user sign-in or onboarding.
+- **Social Authentication**: Social authentication options for quicker user sign-in or onboarding.
 - **Wager Management**: Creation and joining of head-to-head wagers on any topic of choice across diverse categories.
 - **Dispute Resolution**: Evidence-based resolution mechanism to address disputes between wager players, with a focus on fairness and transparency.
 - **Stablecoin Integration**: USDC deposits and withdrawals (on Base and Solana) to enhance borderless payments.

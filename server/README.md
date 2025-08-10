@@ -104,9 +104,10 @@ The database schema is located [here](prisma/schema.prisma). If no schema change
 
 | Method | Path                                    | Description                         |
 | ------ | --------------------------------------- | ----------------------------------- |
-| GET    | /user/profile                           | Get user profile                    |
+| GET    | /user/profile                           | Get profile of logged in user       |
 | PATCH  | /user/profile                           | Update user profile                 |
 | DELETE | /user/profile                           | Delete user profile                 |
+| GET    | /user/:userId                           | Get details of any user             |
 | GET    | /user/wagers                            | Get all wagers for a user           |
 | GET    | /user/transactions?chain=&status=&type= | Retrieve user transaction history   |
 | POST   | /user/wallet/transfer                   | In-app funds transfer between users |

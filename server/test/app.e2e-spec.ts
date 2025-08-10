@@ -63,6 +63,7 @@ describe('E2E Tests', () => {
   let wagerId: number;
   let wagerInviteCode: string;
   let adminId: number;
+  let userTwoId: number;
 
   beforeAll(async () => {
     jest.useRealTimers();
@@ -161,6 +162,7 @@ describe('E2E Tests', () => {
 
         // Store JWT to access authorized endpoints
         userTwoToken = response.body.token as string;
+        userTwoId = response.body.user.id as number;
       },
       requestTimeout,
     );
@@ -332,6 +334,15 @@ describe('E2E Tests', () => {
       },
       requestTimeout,
     );
+
+    it('should retrieve details of any user by ID', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/user/${userTwoId}`)
+        .set('Authorization', `Bearer ${userOneToken}`);
+
+      expect(response.status).toEqual(200);
+      expect(response.body).toHaveProperty('user');
+    });
 
     it('should return all wagers for a user', async () => {
       const response = await request(app.getHttpServer())

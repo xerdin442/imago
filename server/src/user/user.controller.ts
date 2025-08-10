@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Param,
   Patch,
   Post,
   Query,
@@ -100,6 +101,11 @@ export class UserController {
 
       throw error;
     }
+  }
+
+  @Get(':userId')
+  async getUserById(@Param('userId') userId: number): Promise<{ user: User }> {
+    return { user: await this.userService.getUserById(userId) };
   }
 
   @Get('wagers')

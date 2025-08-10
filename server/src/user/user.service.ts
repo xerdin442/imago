@@ -8,6 +8,12 @@ import { uploadFileToS3 } from '@src/common/config/upload';
 export class UserService {
   constructor(private readonly prisma: DbService) {}
 
+  async getUserById(userId: number): Promise<User> {
+    return this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+    });
+  }
+
   async updateProfile(
     userId: number,
     dto: UpdateProfileDTO,

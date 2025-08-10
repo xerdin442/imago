@@ -24,6 +24,7 @@ describe('User Service', () => {
     twoFAEnabled: false,
     balance: 0,
     rewards: 0,
+    appleAuthId: null,
   };
 
   beforeAll(async () => {
@@ -40,6 +41,15 @@ describe('User Service', () => {
   afterEach(() => {
     jest.clearAllMocks();
     jest.restoreAllMocks();
+  });
+
+  describe('Get user by id', () => {
+    it('should return user by id', async () => {
+      (prisma.user.findUniqueOrThrow as jest.Mock).mockResolvedValue(user);
+
+      const response = userService.getUserById(user.id);
+      await expect(response).resolves.toEqual(user);
+    });
   });
 
   describe('Update profile', () => {
