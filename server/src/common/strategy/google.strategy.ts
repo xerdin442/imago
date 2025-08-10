@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Profile, Strategy, VerifyCallback } from 'passport-google-oauth20';
-import { GoogleAuthPayload, GoogleAuthUser } from '../types';
+import { SocialAuthPayload, SocialAuthUser } from '../types';
 import { Request } from 'express';
 import logger from '../logger';
 import { LoginDTO } from '@src/auth/dto';
@@ -58,7 +58,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy) {
         };
 
         // Sign in existing user
-        const authResponse = await this.authService.login(dto);
+        const authResponse: SocialAuthUser = await this.authService.login(dto);
 
         logger.info(
           `[${this.context}] User login successful. Email: ${dto.email}\n`,
@@ -66,7 +66,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy) {
 
         return done(null, authResponse);
       } else {
-        const details: GoogleAuthPayload = {
+        const details: SocialAuthPayload = {
           email: emails[0].value,
           firstName: name.givenName,
           lastName: name.familyName,
@@ -74,7 +74,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy) {
         };
 
         // Sign up and onboard new user
-        const authResponse: GoogleAuthUser =
+        const authResponse: SocialAuthUser =
           await this.authService.signup(details);
 
         logger.info(

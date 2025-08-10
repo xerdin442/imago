@@ -85,7 +85,9 @@ The database schema is located [here](prisma/schema.prisma). If no schema change
 | POST   | /auth/password/new               | Change current password                                   |
 | GET    | /auth/google                     | Redirect to Google's authentication page                  |
 | GET    | /auth/google/callback            | Callback added to OAuth client details on Google console  |
-| GET    | /auth/google/details?googleAuth= | Retrieve user details and JWT after Google authentication |
+| GET    | /auth/apple                      | Redirect to Apple's authentication page                   |
+| POST   | /auth/apple/callback             | Callback endpoint whitelisted on Apple developer console  |
+| GET    | /auth/social/details?socialAuth= | Retrieve user details and JWT after social authentication |
 
 ### Admin API
 
@@ -124,7 +126,7 @@ The database schema is located [here](prisma/schema.prisma). If no schema change
 | POST   | /wagers/:wagerId/claim/accept           | Accept wager prize claim               |
 | POST   | /wagers/:wagerId/claim/contest          | Contest wager prize claim              |
 | GET    | /wagers/:wagerId/dispute/chat           | Retrieve dispute chat messages         |
-| GET    | /wagers/:wagerId/dispute/resolve?admin= | Assign winner after dispute resolution |
+| POST   | /wagers/:wagerId/dispute/resolve?admin= | Assign winner after dispute resolution |
 | DELETE | /wagers/:wagerId                        | Delete a pending wager                 |
 
 ### Wallet API
@@ -137,13 +139,13 @@ The database schema is located [here](prisma/schema.prisma). If no schema change
 | POST   | /wallet/rewards/redeem  | Withdraw BONK token equivalent of user rewards |
 | POST   | /wallet/rewards/convert | Convert reward points and add to user balance  |
 
-## Google Authentication
+## Social Authentication
 
-- The frontend client sends a login request to `auth/google` with a required query parameter to indicate the redirect URL.
-- The client is redirected to Google's onboarding page and the user completes the authentication.
-- Google redirects the frontend client to the success page rendered by the backend. From here, the user is redirected to the frontend client using the earlier specified redirect URL when the `Return` button is clicked on the success page.
-- During the redirect to the frontend client, the backend attaches a `googleAuth` query parameter to the URL.
-- On page load after the redirect, the frontend client should send a request to `auth/google/details` using the `googleAuth` parameter. The value of this parameter is a unique identifier that will be used by the client to retrieve the JWT and other authentication details from the backend.
+- The frontend client sends a login request to `auth/google` or `auth/apple` endpoints. A query parameter, `redirectUrl`, is required to indicate the final redirect URL.
+- The client is redirected to the auth provider's sign-in page and the user completes the authentication.
+- The auth provider redirects the frontend client to the success page rendered by the backend. From here, the user is redirected to the frontend client using the earlier specified redirect URL when the `Return` button is clicked on the success page.
+- During the redirect to the frontend client, the backend attaches a `socialAuth` query parameter to the URL.
+- On page load after the redirect, the frontend client should send a request to `auth/social/details` using the `socialAuth` parameter. The value of this parameter is a unique identifier that will be used by the client to retrieve the JWT and other authentication details from the backend.
 
 ## Deposit Transactions
 

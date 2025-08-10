@@ -22,7 +22,7 @@ export const Secrets = {
   IDEMPOTENCY_KEYS_STORE_INDEX: config.getOrThrow<number>(
     'IDEMPOTENCY_KEYS_STORE_INDEX',
   ),
-  GOOGLE_AUTH_STORE_INDEX: config.getOrThrow<number>('GOOGLE_AUTH_STORE_INDEX'),
+  SOCIAL_AUTH_STORE_INDEX: config.getOrThrow<number>('SOCIAL_AUTH_STORE_INDEX'),
   DEFAULT_IMAGE: config.getOrThrow<string>('DEFAULT_IMAGE'),
   RESEND_EMAIL_API_KEY: config.getOrThrow<string>('RESEND_EMAIL_API_KEY'),
   APP_NAME: config.getOrThrow<string>('APP_NAME'),
@@ -32,6 +32,8 @@ export const Secrets = {
   GOOGLE_CLIENT_ID: config.getOrThrow<string>('GOOGLE_CLIENT_ID'),
   GOOGLE_CLIENT_SECRET: config.getOrThrow<string>('GOOGLE_CLIENT_SECRET'),
   GOOGLE_CALLBACK_URL: config.getOrThrow<string>('GOOGLE_CALLBACK_URL'),
+  APPLE_CLIENT_ID: config.getOrThrow<string>('APPLE_CLIENT_ID'),
+  APPLE_CALLBACK_URL: config.getOrThrow<string>('APPLE_CALLBACK_URL'),
   AWS_ACCESS_KEY_ID: config.getOrThrow<string>('AWS_ACCESS_KEY_ID'),
   AWS_SECRET_ACCESS_KEY: config.getOrThrow<string>('AWS_SECRET_ACCESS_KEY'),
   AWS_REGION: config.getOrThrow<string>('AWS_REGION'),

@@ -17,7 +17,7 @@ import {
 } from './dto';
 import { randomUUID } from 'crypto';
 import { SessionService } from '@src/common/session';
-import { GoogleAuthPayload, SessionData } from '@src/common/types';
+import { SessionData, SocialAuthPayload } from '@src/common/types';
 import { DbService } from '@src/db/db.service';
 import { MetricsService } from '@src/metrics/metrics.service';
 import { Secrets } from '@src/common/secrets';
@@ -34,7 +34,7 @@ export class AuthService {
   ) {}
 
   async createNewUser(
-    details: SignupDTO | GoogleAuthPayload,
+    details: SignupDTO | SocialAuthPayload,
     file?: Express.Multer.File,
   ): Promise<User> {
     try {
@@ -66,7 +66,7 @@ export class AuthService {
         return user;
       }
 
-      // Create new user through Google authentication
+      // Create new user through social authentication
       const username =
         details.firstName.toLowerCase() + `_${randomUUID().split('-')[3]}`;
       const password = await argon.hash(Secrets.SOCIAL_AUTH_PASSWORD);
@@ -80,6 +80,7 @@ export class AuthService {
           username,
           balance: 0,
           profileImage: details.profileImage || defaultImage,
+          appleAuthId: details.authId,
         },
       });
 
@@ -100,7 +101,7 @@ export class AuthService {
   }
 
   async signup(
-    details: SignupDTO | GoogleAuthPayload,
+    details: SignupDTO | SocialAuthPayload,
     file?: Express.Multer.File,
   ): Promise<{ user: User; token: string }> {
     try {

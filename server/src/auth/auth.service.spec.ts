@@ -9,7 +9,7 @@ import * as argon from 'argon2';
 import * as speakeasy from 'speakeasy';
 import * as qrCode from 'qrcode';
 import { SessionService } from '@src/common/session';
-import { GoogleAuthPayload, SessionData } from '@src/common/types';
+import { SocialAuthPayload, SessionData } from '@src/common/types';
 import { DbService } from '@src/db/db.service';
 import { MetricsService } from '@src/metrics/metrics.service';
 import { AuthService } from './auth.service';
@@ -50,7 +50,7 @@ describe('Auth Service', () => {
     username: 'goat_cr7',
   };
 
-  const authPayload: GoogleAuthPayload = {
+  const authPayload: SocialAuthPayload = {
     email: 'user@example.com',
     firstName: 'Xerdin',
     lastName: 'Ludac',
@@ -66,6 +66,7 @@ describe('Auth Service', () => {
     twoFAEnabled: false,
     balance: 0,
     rewards: 0,
+    appleAuthId: null,
   };
 
   beforeAll(async () => {
@@ -114,8 +115,8 @@ describe('Auth Service', () => {
       await expect(response).resolves.toEqual(user);
     });
 
-    it('should create new user through Google authentication', async () => {
-      const googleAuthUser: User = {
+    it('should create new user through social authentication', async () => {
+      const socialAuthUser: User = {
         id: 1,
         ...authPayload,
         username:
@@ -128,11 +129,12 @@ describe('Auth Service', () => {
         twoFAEnabled: false,
         balance: 0,
         rewards: 0,
+        appleAuthId: null,
       };
-      (prisma.user.create as jest.Mock).mockResolvedValue(googleAuthUser);
+      (prisma.user.create as jest.Mock).mockResolvedValue(socialAuthUser);
 
       const response = authService.createNewUser(authPayload);
-      await expect(response).resolves.toEqual(googleAuthUser);
+      await expect(response).resolves.toEqual(socialAuthUser);
     });
 
     it('should throw if a user exists with given email', async () => {

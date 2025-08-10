@@ -11,17 +11,42 @@ export type SessionData = {
   otpExpiration?: number;
 };
 
-export type GoogleAuthUser = {
+export type SocialAuthUser = {
   user?: User;
   token: string;
   twoFactorAuth?: boolean;
 };
 
-export type GoogleAuthPayload = {
+export type SocialAuthPayload = {
   email: string;
   firstName: string;
   lastName: string;
   profileImage?: string;
+  authId?: string;
+};
+
+export type AppleAuthPayload = {
+  iss: string;
+  aud: string;
+  exp: number;
+  iat: number;
+  sub: string;
+  email: string;
+  email_verified: string;
+  is_private_email: string;
+};
+
+export type AppleAuthDTO = {
+  code: string;
+  id_token: string;
+  state: string;
+  user?: {
+    name: {
+      firstName: string;
+      lastName: string;
+    };
+    email: string;
+  };
 };
 
 export enum USDCTokenAddress {
