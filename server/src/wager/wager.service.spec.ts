@@ -29,6 +29,7 @@ describe('Wager Service', () => {
     twoFAEnabled: false,
     balance: 25,
     rewards: 0,
+    appleAuthId: null,
   };
 
   const playerTwo: User = {

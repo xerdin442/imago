@@ -22,7 +22,7 @@ describe('User Service', () => {
     profileImage: 'default-image-url',
     twoFASecret: null,
     twoFAEnabled: false,
-    balance: 0,
+    balance: 100,
     rewards: 0,
     appleAuthId: null,
   };
@@ -86,7 +86,7 @@ describe('User Service', () => {
     it('should delete user account', async () => {
       (prisma.user.delete as jest.Mock).mockResolvedValue(user);
 
-      const response = userService.deleteAccount(user);
+      const response = userService.deleteAccount({ ...user, balance: 0 });
       await expect(response).resolves.toBeUndefined();
     });
   });
@@ -142,7 +142,37 @@ describe('User Service', () => {
   });
 
   describe('Funds Transfer', () => {
+    it('should throw if amount is greater than user balance', async () => {
+      (prisma.user.findUniqueOrThrow as jest.Mock).mockResolvedValue(user);
+
+      const response = userService.transferFunds(user.id, {
+        amount: 120,
+        username: 'xerdin442',
+      });
+
+      await expect(response).rejects.toBeInstanceOf(BadRequestException);
+      await expect(response).rejects.toThrow('Insufficient balance');
+    });
+
     it('should transfer funds from one user to another', async () => {
+      (prisma.user.findUniqueOrThrow as jest.Mock).mockResolvedValue(user);
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
+
+      const response = userService.transferFunds(user.id, {
+        amount: 20,
+        username: 'wrong_username',
+      });
+
+      await expect(response).rejects.toBeInstanceOf(BadRequestException);
+      await expect(response).rejects.toThrow('Invalid username');
+    });
+
+    it('should transfer funds from one user to another', async () => {
+      (prisma.user.findUniqueOrThrow as jest.Mock).mockResolvedValue(user);
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+        ...user,
+        username: 'xerdin442',
+      });
       (prisma.user.update as jest.Mock).mockResolvedValue(user);
 
       const response = userService.transferFunds(user.id, {

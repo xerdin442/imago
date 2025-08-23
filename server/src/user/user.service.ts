@@ -92,13 +92,27 @@ export class UserService {
 
   async transferFunds(userId: number, dto: FundsTransferDTO): Promise<string> {
     try {
+      const sender = await this.prisma.user.findUniqueOrThrow({
+        where: { id: userId },
+      });
+      if (dto.amount > sender.balance) {
+        throw new BadRequestException('Insufficient balance');
+      }
+
+      const recipient = await this.prisma.user.findUnique({
+        where: { username: dto.username },
+      });
+      if (!recipient) {
+        throw new BadRequestException('Invalid username');
+      }
+
       // Update wallet balance of the sender and recipient
       await this.prisma.user.update({
-        where: { id: userId },
+        where: { id: sender.id },
         data: { balance: { decrement: dto.amount } },
       });
-      const recipient = await this.prisma.user.update({
-        where: { username: dto.username },
+      await this.prisma.user.update({
+        where: { id: recipient.id },
         data: { balance: { increment: dto.amount } },
       });
 
