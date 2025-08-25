@@ -164,6 +164,14 @@ export class UserController {
 
   @Get(':userId')
   async getUserById(@Param('userId') userId: number): Promise<{ user: User }> {
-    return { user: await this.userService.getUserById(userId) };
+    try {
+      return { user: await this.userService.getUserById(userId) };
+    } catch (error) {
+      logger.error(
+        `[${this.context}] An error occurred while retrieving user's details by ID. Error: ${error.message}\n`,
+      );
+
+      throw error;
+    }
   }
 }
