@@ -341,6 +341,14 @@ export class WagerService {
       if (wager.status === 'ACTIVE') {
         throw new BadRequestException('An active wager cannot be deleted');
       }
+
+      // Update user balance
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { balance: { increment: wager.amount / 2 } },
+      });
+
+      // Delete wager
       if (wager.status === 'PENDING') {
         await this.prisma.wager.delete({
           where: { id: wagerId },

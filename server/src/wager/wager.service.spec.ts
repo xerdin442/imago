@@ -435,6 +435,7 @@ describe('Wager Service', () => {
         ...wager,
         status: 'PENDING',
       });
+      (prisma.user.update as jest.Mock).mockResolvedValue(playerOne);
       (prisma.wager.delete as jest.Mock).mockResolvedValue(wager);
 
       const response = wagerService.deleteWager(playerOne.id, wager.id);
