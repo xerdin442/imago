@@ -133,9 +133,16 @@ export function generateCallbackHtml(
 
   // Add the script tag to redirect to the homepage
   const scriptContent = `
-    const returnButton = document.getElementById("return-button");    
+    const returnButton = document.getElementById("return-button");
+
     returnButton.addEventListener("click", () => {
-      window.location.href = "${redirectUrl}?socialAuth=${identifier}";
+      returnButton.innerHTML = '';
+      returnButton.textContent = 'Redirecting...';
+      returnButton.disabled = true;
+
+      setTimeout(() => {
+        window.location.href = "${redirectUrl}?socialAuth=${identifier}";
+      }, 500);
     });
   `;
 
