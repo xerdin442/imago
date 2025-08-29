@@ -1,31 +1,26 @@
 import * as cheerio from 'cheerio';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export function generateCallbackHtml(
   identifier: string,
   redirectUrl: string,
   nonce: string,
 ): string {
-  // Use Cheerio to create a simple HTML structure
-  const $ = cheerio.load(
-    '<!DOCTYPE html><html><head><title>Success</title></head><body></body></html>',
-  );
+  const htmlFilePath = path.resolve(__dirname, 'callback.html');
+  const htmlContent = fs.readFileSync(htmlFilePath, 'utf-8');
 
-  const mainContent = `
-    <div class="container">
-      <h1 class="text-2xl font-bold mb-4">Authentication Successful!</h1>
-      <button id="return-button">Return to Wager App</button>
-    </div>`;
-  $('body').append(mainContent);
+  const $ = cheerio.load(htmlContent);
 
-  // Add the script tag to redirect to the homepage
+  // Add the script tag to redirect
   const scriptContent = `
-    const returnButton = document.getElementById("return-button");    
+    const returnButton = document.getElementById("return-button");
     returnButton.addEventListener("click", () => {
       window.location.href = "${redirectUrl}?socialAuth=${identifier}";
     });
   `;
 
-  // Create a script element and append to the body
+  // Create and append the script element with the nonce
   const scriptElement = $('<script>')
     .html(scriptContent)
     .attr('nonce', `${nonce}`);
