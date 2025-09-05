@@ -69,13 +69,6 @@ jest.mock('thirdweb/extensions/erc20', () => ({
   transfer: jest.fn(),
 }));
 
-jest.mock('@src/common/secrets', () => ({
-  ...jest.requireActual('@src/common/secrets'),
-  getPlatformWalletKeyphrase: jest
-    .fn()
-    .mockResolvedValue('platform-wallet-keyphrase'),
-}));
-
 jest.mock('@src/common/config/mail', () => ({
   ...jest.requireActual('@src/common/config/mail'),
   sendEmail: jest.fn(),
@@ -104,6 +97,7 @@ describe('Wallet Service', () => {
     twoFAEnabled: false,
     balance: 0,
     rewards: 0,
+    appleAuthId: null,
   };
 
   const admin: Admin = {
@@ -217,7 +211,7 @@ describe('Wallet Service', () => {
         .mockReturnValue(Buffer.from('seed-phrase'));
     });
 
-    it('should return the wallet instance of the platform ethereum wallet', async () => {
+    it('should return the wallet instance of the platform ethereum wallet', () => {
       jest.spyOn(hdkey.EthereumHDKey, 'fromMasterSeed').mockReturnValue({
         derivePath: jest.fn().mockReturnValue({
           getWallet: jest.fn().mockReturnValue(wallet),
@@ -225,10 +219,10 @@ describe('Wallet Service', () => {
       } as unknown as hdkey.EthereumHDKey);
 
       const response = walletService.getPlatformWallet('BASE');
-      await expect(response).resolves.toEqual(wallet);
+      expect(response).toEqual(wallet);
     });
 
-    it('should return the keypair of the platform solana wallet', async () => {
+    it('should return the keypair of the platform solana wallet', () => {
       jest.spyOn(ed25519, 'derivePath').mockReturnValue({
         key: Buffer.from('key-from-seed'),
         chainCode: Buffer.from('chain-code'),
@@ -236,7 +230,7 @@ describe('Wallet Service', () => {
       jest.spyOn(Keypair, 'fromSeed').mockReturnValue(keypair);
 
       const response = walletService.getPlatformWallet('SOLANA');
-      await expect(response).resolves.toEqual(keypair);
+      expect(response).toEqual(keypair);
     });
   });
 
@@ -398,7 +392,7 @@ describe('Wallet Service', () => {
       (web3.eth.abi.decodeParameters as jest.Mock).mockReturnValue(decodedData);
       (web3.utils.fromWei as jest.Mock).mockReturnValue(`${depositDto.amount}`);
 
-      jest.spyOn(walletService, 'getPlatformWallet').mockResolvedValue(wallet);
+      jest.spyOn(walletService, 'getPlatformWallet').mockReturnValue(wallet);
       jest
         .spyOn(walletService, 'updateDbAfterTransaction')
         .mockResolvedValueOnce({ user, updatedTx: transaction });
@@ -636,7 +630,7 @@ describe('Wallet Service', () => {
 
     beforeEach(() => {
       jest.spyOn(axios, 'post').mockResolvedValue(rpcTransactionResponse);
-      jest.spyOn(walletService, 'getPlatformWallet').mockResolvedValue(keypair);
+      jest.spyOn(walletService, 'getPlatformWallet').mockReturnValue(keypair);
       jest
         .spyOn(walletService, 'updateDbAfterTransaction')
         .mockResolvedValueOnce({ user, updatedTx: tx });
@@ -887,7 +881,7 @@ describe('Wallet Service', () => {
   describe('Withdrawal on Base', () => {
     beforeEach(() => {
       jest.spyOn(RedisService, 'connectToRedis').mockResolvedValue(redis);
-      jest.spyOn(walletService, 'getPlatformWallet').mockResolvedValue(wallet);
+      jest.spyOn(walletService, 'getPlatformWallet').mockReturnValue(wallet);
 
       jest.spyOn(ThirdwebWallets, 'privateKeyToAccount').mockReturnValue({
         address: account.address,
@@ -935,7 +929,7 @@ describe('Wallet Service', () => {
 
     beforeEach(() => {
       jest.spyOn(RedisService, 'connectToRedis').mockResolvedValue(redis);
-      jest.spyOn(walletService, 'getPlatformWallet').mockResolvedValue(keypair);
+      jest.spyOn(walletService, 'getPlatformWallet').mockReturnValue(keypair);
       jest
         .spyOn(walletService, 'updateDbAfterTransaction')
         .mockResolvedValueOnce({ user, updatedTx: tx });
@@ -988,7 +982,7 @@ describe('Wallet Service', () => {
   describe('Ethereum Wallet Balance', () => {
     beforeEach(() => {
       helper.fetchTokenPrice.mockResolvedValue(3000);
-      jest.spyOn(walletService, 'getPlatformWallet').mockResolvedValue(wallet);
+      jest.spyOn(walletService, 'getPlatformWallet').mockReturnValue(wallet);
 
       (web3.eth.accounts.privateKeyToAccount as jest.Mock).mockReturnValue(
         account,
@@ -1043,7 +1037,7 @@ describe('Wallet Service', () => {
   describe('Solana Wallet Balance', () => {
     beforeEach(() => {
       helper.fetchTokenPrice.mockResolvedValue(200);
-      jest.spyOn(walletService, 'getPlatformWallet').mockResolvedValue(keypair);
+      jest.spyOn(walletService, 'getPlatformWallet').mockReturnValue(keypair);
       (prisma.admin.findUniqueOrThrow as jest.Mock).mockResolvedValue(admin);
     });
 
@@ -1139,7 +1133,7 @@ describe('Wallet Service', () => {
   describe('Rewards', () => {
     beforeEach(() => {
       helper.fetchTokenPrice.mockResolvedValue(0.003);
-      jest.spyOn(walletService, 'getPlatformWallet').mockResolvedValue(keypair);
+      jest.spyOn(walletService, 'getPlatformWallet').mockReturnValue(keypair);
       (prisma.user.findUniqueOrThrow as jest.Mock).mockResolvedValue(user);
     });
 

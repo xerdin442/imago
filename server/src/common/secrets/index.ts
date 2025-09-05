@@ -1,9 +1,4 @@
 import { ConfigService } from '@nestjs/config';
-import {
-  SecretsManagerClient,
-  GetSecretValueCommand,
-  GetSecretValueCommandOutput,
-} from '@aws-sdk/client-secrets-manager';
 
 // Initialize Config Service
 const config = new ConfigService();
@@ -43,33 +38,7 @@ export const Secrets = {
   ALCHEMY_API_KEY: config.getOrThrow<string>('ALCHEMY_API_KEY'),
   COINGECKO_API_KEY: config.getOrThrow<string>('COINGECKO_API_KEY'),
   THIRDWEB_API_KEY: config.getOrThrow<string>('THIRDWEB_API_KEY'),
-};
-
-// Initialize AWS SecretsManager Client
-const client = new SecretsManagerClient({
-  region: 'eu-west-2',
-  credentials: {
-    accessKeyId: Secrets.AWS_ACCESS_KEY_ID,
-    secretAccessKey: Secrets.AWS_SECRET_ACCESS_KEY,
-  },
-});
-
-// Retrieve wallet keyphrase from cloud storage
-export const getPlatformWalletKeyphrase = async (): Promise<string> => {
-  try {
-    const response: GetSecretValueCommandOutput = await client.send(
-      new GetSecretValueCommand({
-        SecretId: 'wager-app/platform-wallet-keyphrase',
-        VersionStage: 'AWSCURRENT',
-      }),
-    );
-
-    const secret = JSON.parse(response.SecretString as string) as {
-      PLATFORM_WALLET_KEYPHRASE: string;
-    };
-
-    return secret.PLATFORM_WALLET_KEYPHRASE;
-  } catch (error) {
-    throw error;
-  }
+  PLATFORM_WALLET_KEYPHRASE: config.getOrThrow<string>(
+    'PLATFORM_WALLET_KEYPHRASE',
+  ),
 };

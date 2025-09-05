@@ -39,10 +39,10 @@ import { RedisClientType } from 'redis';
 import { DbService } from '@src/db/db.service';
 import { MetricsService } from '@src/metrics/metrics.service';
 import { HelperService } from './helpers';
-import { getPlatformWalletKeyphrase, Secrets } from '@src/common/secrets';
 import logger from '@src/common/logger';
 import { sendEmail } from '@src/common/config/mail';
 import { connectToRedis } from '@src/common/config/redis';
+import { Secrets } from '@src/common/secrets';
 
 @Injectable()
 export class WalletService {
@@ -76,9 +76,8 @@ export class WalletService {
     });
   }
 
-  async getPlatformWallet(chain: Chain): Promise<Wallet | Keypair> {
-    const keyPhrase: string = await getPlatformWalletKeyphrase();
-    const seed = bip39.mnemonicToSeedSync(keyPhrase);
+  getPlatformWallet(chain: Chain): Wallet | Keypair {
+    const seed = bip39.mnemonicToSeedSync(Secrets.PLATFORM_WALLET_KEYPHRASE);
 
     if (chain === 'BASE') {
       const hdWallet = hdkey.EthereumHDKey.fromMasterSeed(seed);
@@ -286,7 +285,7 @@ export class WalletService {
       const amountCheck = amount === parseFloat(amountTransferred.toFixed(2));
 
       // Confirm that the recipient address is the platform wallet address
-      const platformWallet = (await this.getPlatformWallet('BASE')) as Wallet;
+      const platformWallet = this.getPlatformWallet('BASE') as Wallet;
       const walletCheck =
         recipientAddress.toLowerCase() ===
         platformWallet.getAddressString().toLowerCase();
@@ -424,7 +423,7 @@ export class WalletService {
       const amountCheck = amount === parseFloat(amountTransferred.toFixed(2));
 
       // Confirm that the recipient address is the platform wallet address
-      const platformWallet = (await this.getPlatformWallet(chain)) as Keypair;
+      const platformWallet = this.getPlatformWallet(chain) as Keypair;
       const walletCheck =
         recipientAddress === platformWallet.publicKey.toBase58();
 
@@ -483,7 +482,7 @@ export class WalletService {
     );
 
     try {
-      const platformWallet = (await this.getPlatformWallet('BASE')) as Wallet;
+      const platformWallet = this.getPlatformWallet('BASE') as Wallet;
       const privateKey = platformWallet.getPrivateKeyString();
 
       // Fetch account from private key
@@ -568,7 +567,7 @@ export class WalletService {
     );
 
     try {
-      const sender = (await this.getPlatformWallet('SOLANA')) as Keypair;
+      const sender = this.getPlatformWallet('SOLANA') as Keypair;
       const recipient = new PublicKey(dto.address);
 
       // Initiate withdrawal from platform wallet
@@ -659,7 +658,7 @@ export class WalletService {
       const minimumBalance = this.STABLECOIN_MINIMUM_BALANCE / 4 / usdPrice;
 
       if (chain === 'BASE') {
-        const platformWallet = (await this.getPlatformWallet(chain)) as Wallet;
+        const platformWallet = this.getPlatformWallet(chain) as Wallet;
         const privateKey = platformWallet.getPrivateKeyString();
 
         const account = this.web3.eth.accounts.privateKeyToAccount(privateKey);
@@ -680,7 +679,7 @@ export class WalletService {
       }
 
       if (chain === 'SOLANA') {
-        const platformWallet = (await this.getPlatformWallet(chain)) as Keypair;
+        const platformWallet = this.getPlatformWallet(chain) as Keypair;
 
         // Get SOL balance
         const currentBalanceInLamports = await this.connection.getBalance(
@@ -721,9 +720,7 @@ export class WalletService {
       let currentBalance: number = 0;
 
       if (chainOrToken === 'BASE') {
-        const platformWallet = (await this.getPlatformWallet(
-          chainOrToken,
-        )) as Wallet;
+        const platformWallet = this.getPlatformWallet(chainOrToken) as Wallet;
 
         // Get USDC contract
         const usdcContract = getContract({
@@ -746,9 +743,7 @@ export class WalletService {
       }
 
       if (chainOrToken === 'SOLANA') {
-        const platformWallet = (await this.getPlatformWallet(
-          chainOrToken,
-        )) as Keypair;
+        const platformWallet = this.getPlatformWallet(chainOrToken) as Keypair;
 
         // Get USDC token address of platform wallet
         const platformTokenAddress = await this.helper.getTokenAccountAddress(
@@ -775,9 +770,7 @@ export class WalletService {
         // Estimate the minimum balance using the USD prices
         const minimumBalance = this.STABLECOIN_MINIMUM_BALANCE / 100 / usdPrice;
 
-        const platformWallet = (await this.getPlatformWallet(
-          'SOLANA',
-        )) as Keypair;
+        const platformWallet = this.getPlatformWallet('SOLANA') as Keypair;
 
         // Get BONK token address of the platform wallet
         const platformTokenAddress = await this.helper.getTokenAccountAddress(
@@ -857,7 +850,7 @@ export class WalletService {
         where: { id: userId },
       });
 
-      const sender = (await this.getPlatformWallet('SOLANA')) as Keypair;
+      const sender = this.getPlatformWallet('SOLANA') as Keypair;
       const recipient = new PublicKey(dto.address);
 
       // Withdraw equivalent of user rewards in BONK token from platform wallet
