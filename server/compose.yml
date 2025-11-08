@@ -1,13 +1,15 @@
 services:
   backend:
     build:
-      context: .  
+      context: .
+    container_name: imago-backend
     restart: always
     ports:
       - "3000:3000"
       - "5555:5555"
     networks:
       - backend-network
+      - monitoring
     env_file:
       - ./.env
     depends_on:
@@ -16,6 +18,7 @@ services:
 
   database:
     image: postgres:latest
+    container_name: imago-database
     restart: always
     ports:
       - "5432:5432"
@@ -26,9 +29,10 @@ services:
       POSTGRES_DB: ${DATABASE_NAME}
     volumes:
       - db-data:/var/lib/postgresql/data
-  
+
   redis:
     image: redis:latest
+    container_name: imago-redis
     restart: always
     ports:
       - "6379:6379"
@@ -39,9 +43,41 @@ services:
     command: >
       /bin/sh -c "redis-server --requirepass ${REDIS_PASSWORD}"
 
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: imago-prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    restart: always
+    networks:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana-oss:10.2.3
+    container_name: imago-grafana
+    ports:
+      - "3002:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - prometheus
+    restart: always
+    networks:
+      - monitoring
+
 volumes:
   db-data:
   redis-data:
+  prometheus-data:
 
 networks:
   backend-network:
+  monitoring:
