@@ -9,6 +9,16 @@ import { WagerService } from './wager.service';
 import { BadRequestException } from '@nestjs/common';
 import { HelperService } from './helpers';
 
+jest.mock('@nestjs/config', () => ({
+  ConfigService: jest.fn().mockImplementation(() => ({
+    getOrThrow: jest.fn((key: string) => {
+      if (key === 'APP_NAME') return 'Wager Application';
+
+      return undefined;
+    }),
+  })),
+}));
+
 describe('Wager Service', () => {
   let wagerService: WagerService;
   let prisma: DeepMocked<DbService>;

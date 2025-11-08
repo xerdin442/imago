@@ -6,6 +6,16 @@ import { DbService } from '@src/db/db.service';
 import { UpdateProfileDTO } from './dto';
 import { UserService } from './user.service';
 
+jest.mock('@nestjs/config', () => ({
+  ConfigService: jest.fn().mockImplementation(() => ({
+    getOrThrow: jest.fn((key: string) => {
+      if (key === 'APP_NAME') return 'Wager Application';
+
+      return undefined;
+    }),
+  })),
+}));
+
 describe('User Service', () => {
   let userService: UserService;
   let prisma: DeepMocked<DbService>;
