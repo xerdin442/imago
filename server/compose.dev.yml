@@ -5,8 +5,9 @@ services:
       args:
         - NODE_ENV=development
     volumes:
-      - ./:/usr/src/app:rw
+      - .:/usr/src/app:delegated
+      - /usr/src/app/node_modules
     environment:
       - NODE_ENV=development
     command: >
-      sh -c "npm run deploy && npm run start:dev"
+      sh -c "npx prisma migrate dev && npm run start:dev"
