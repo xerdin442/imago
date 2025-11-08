@@ -1,10 +1,11 @@
-name: CI/CD - Build and Test Codebase
+name: CI/CD Pipline
 
 on:
   push:
     branches:
       - master
   pull_request:
+    branches: ['master', 'feat/*', 'fix/*']
 
 jobs:
   build-test-push:
