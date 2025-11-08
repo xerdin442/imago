@@ -1,0 +1,163 @@
+{
+  "title": "Imago Observability Metrics",
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "15s",
+  "tags": [
+    "imago",
+    "wager_app",
+    "prometheus"
+  ],
+  "panels": [
+    {
+      "type": "singlestat",
+      "title": "2FA Enabled Users",
+      "description": "Current count of users who have 2FA enabled",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "two_fa_enabled_users",
+          "legendFormat": "Current Count"
+        }
+      ],
+      "gauge": {
+        "show": true,
+        "minValue": 0,
+        "maxValue": 10000
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 0
+      }
+    },
+    {
+      "type": "graph",
+      "title": "Wager Disputes",
+      "description": "Number of wager disputes per category",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (category) (rate(wager_disputes_total[5m]))",
+          "legendFormat": "Category: {{category}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      }
+    },
+    {
+      "type": "graph",
+      "title": "Failed Deposits",
+      "description": "Number of failed deposit attempts per chain",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (chain) (rate(failed_deposits_total[5m]))",
+          "legendFormat": "Chain: {{chain}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "type": "graph",
+      "title": "Successful Deposits",
+      "description": "Number of successful deposits per chain.",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (chain) (rate(successful_deposits_total[5m]))",
+          "legendFormat": "Chain: {{chain}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 8
+      }
+    },
+    {
+      "type": "graph",
+      "title": "Deposit Volume",
+      "description": "Total volume of deposits per chain",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (chain) (rate(deposit_volume_total[5m]))",
+          "legendFormat": "Chain: {{chain}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 8
+      }
+    },
+    {
+      "type": "graph",
+      "title": "Successful Withdrawals",
+      "description": "Number of successful withdrawals per chain.",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (chain) (rate(successful_withdrawals_total[5m]))",
+          "legendFormat": "Chain: {{chain}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 8
+      }
+    },
+    {
+      "type": "graph",
+      "title": "Failed Withdrawals",
+      "description": "Number of failed withdrawal attempts per chain.",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (chain) (rate(failed_withdrawals_total[5m]))",
+          "legendFormat": "Chain: {{chain}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 16
+      }
+    },
+    {
+      "type": "graph",
+      "title": "Total Withdrawal Volume",
+      "description": "Total volume of withdrawals per chain.",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (chain) (rate(withdrawal_volume_total[5m]))",
+          "legendFormat": "Chain: {{chain}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 16,
+        "x": 8,
+        "y": 16
+      }
+    }
+  ]
+}
