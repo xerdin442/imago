@@ -3,7 +3,6 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
 import * as cookieParser from 'cookie-parser';
-import { Secrets } from './common/secrets';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 
 async function bootstrap() {
@@ -22,6 +21,6 @@ async function bootstrap() {
     }),
   );
 
-  await app.listen(Secrets.PORT ?? 3000, '0.0.0.0');
+  await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
 }
 void bootstrap();

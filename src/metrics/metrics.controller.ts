@@ -1,14 +1,16 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Res } from '@nestjs/common';
+import { Response } from 'express';
+import * as client from 'prom-client';
 import { MetricsService } from './metrics.service';
-import { SuperAdminGuard } from '@src/custom/guards/admin.guard';
 
 @Controller('metrics')
 export class MetricsController {
   constructor(private readonly metricsService: MetricsService) {}
 
   @Get()
-  @UseGuards(SuperAdminGuard)
-  async getMetrics() {
-    return this.metricsService.getMetrics();
+  async getMetrics(@Res() res: Response) {
+    const metrics = await this.metricsService.getMetrics();
+    res.setHeader('Content-Type', client.register.contentType);
+    res.send(metrics);
   }
 }

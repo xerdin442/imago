@@ -18,7 +18,8 @@
         {
           "refId": "A",
           "expr": "two_fa_enabled_users",
-          "legendFormat": "Current Count"
+          "legendFormat": "Current Count",
+          "instant": true
         }
       ],
       "gauge": {

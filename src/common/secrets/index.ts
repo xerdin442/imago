@@ -1,4 +1,8 @@
 import { ConfigService } from '@nestjs/config';
+import * as dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 // Initialize Config Service
 const config = new ConfigService();

@@ -8,8 +8,8 @@ export class MetricsService {
 
   constructor(private readonly registry: Registry) {}
 
-  async getMetrics(): Promise<Record<string, any>> {
-    return await this.registry.getMetricsAsJSON();
+  async getMetrics(): Promise<string> {
+    return await this.registry.metrics();
   }
 
   updateGauge(
