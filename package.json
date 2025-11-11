@@ -29,6 +29,7 @@
   "dependencies": {
     "@bonfida/spl-name-service": "^3.0.12",
     "@ethereumjs/wallet": "^10.0.0",
+    "@fluidjs/multer-cloudinary": "^1.0.4",
     "@nestjs/bull": "^11.0.2",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",

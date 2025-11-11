@@ -21,7 +21,6 @@ import { SessionData, SocialAuthPayload } from '@src/common/types';
 import { DbService } from '@src/db/db.service';
 import { MetricsService } from '@src/metrics/metrics.service';
 import { Secrets } from '@src/common/secrets';
-import { uploadFileToS3 } from '@src/common/config/upload';
 
 @Injectable()
 export class AuthService {
@@ -35,7 +34,7 @@ export class AuthService {
 
   async createNewUser(
     details: SignupDTO | SocialAuthPayload,
-    file?: Express.Multer.File,
+    filePath?: string,
   ): Promise<User> {
     try {
       const defaultImage = Secrets.DEFAULT_IMAGE;
@@ -47,10 +46,6 @@ export class AuthService {
         if (details.password !== details.confirmPassword) {
           throw new BadRequestException('Passwords do not match. Try again!');
         }
-
-        // Upload file to AWS if available
-        let filePath: string = '';
-        if (file) filePath = await uploadFileToS3(file, 'profile-images');
 
         const user = await this.prisma.user.create({
           data: {
@@ -102,10 +97,10 @@ export class AuthService {
 
   async signup(
     details: SignupDTO | SocialAuthPayload,
-    file?: Express.Multer.File,
+    filePath?: string,
   ): Promise<{ user: User; token: string }> {
     try {
-      const user = await this.createNewUser(details, file);
+      const user = await this.createNewUser(details, filePath);
 
       // Send an onboarding email to the new user
       await this.authQueue.add('signup', { email: user.email });

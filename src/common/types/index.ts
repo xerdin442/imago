@@ -1,10 +1,5 @@
 import { User } from '@prisma/client';
 
-export type SerializedBuffer = {
-  type: 'Buffer';
-  data: number[];
-};
-
 export type SessionData = {
   email?: string;
   otp?: string;

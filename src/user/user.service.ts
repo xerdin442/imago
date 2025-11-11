@@ -2,7 +2,6 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { Transaction, User, Wager } from '@prisma/client';
 import { FundsTransferDTO, GetTransactionsDTO, UpdateProfileDTO } from './dto';
 import { DbService } from '@src/db/db.service';
-import { uploadFileToS3 } from '@src/common/config/upload';
 
 @Injectable()
 export class UserService {
@@ -17,13 +16,9 @@ export class UserService {
   async updateProfile(
     userId: number,
     dto: UpdateProfileDTO,
-    file?: Express.Multer.File,
+    filePath?: string,
   ): Promise<User> {
     try {
-      // Upload file to AWS if available
-      let filePath: string = '';
-      if (file) filePath = await uploadFileToS3(file, 'profile-images');
-
       const user = await this.prisma.user.update({
         where: { id: userId },
         data: {

@@ -26,7 +26,6 @@ import { AuthGuard } from '@nestjs/passport';
 import { User } from '@prisma/client';
 import { GetUser } from '../custom/decorators';
 import { FileInterceptor } from '@nestjs/platform-express';
-import * as multer from 'multer';
 import { GoogleAuthGuard } from '../custom/guards/google.guard.';
 import { Request, Response } from 'express';
 import { randomBytes, randomUUID } from 'crypto';
@@ -43,6 +42,7 @@ import { RedisClientType } from 'redis';
 import { connectToRedis } from '@src/common/config/redis';
 import { Secrets } from '@src/common/secrets';
 import { AppleAuthHandler } from '@src/common/apple';
+import { UploadService } from '@src/common/config/upload';
 
 @Controller('auth')
 export class AuthController {
@@ -60,27 +60,9 @@ export class AuthController {
   @Post('signup')
   @UseInterceptors(
     FileInterceptor('profileImage', {
-      storage: multer.memoryStorage(),
-      limits: { fieldSize: 8 * 1024 * 1024 },
-      fileFilter: (
-        req: Request,
-        file: Express.Multer.File,
-        callback: multer.FileFilterCallback,
-      ): void => {
-        const allowedMimetypes: string[] = [
-          'image/png',
-          'image/heic',
-          'image/jpeg',
-          'image/webp',
-          'image/heif',
-        ];
-
-        if (allowedMimetypes.includes(file.mimetype)) {
-          callback(null, true);
-        } else {
-          callback(null, false);
-        }
-      },
+      fileFilter: UploadService.fileFilter,
+      limits: { fileSize: 8 * 1024 * 1024 },
+      storage: UploadService.storage('user_profile', 'image'),
     }),
   )
   async signup(
@@ -88,7 +70,7 @@ export class AuthController {
     @UploadedFile() file?: Express.Multer.File,
   ): Promise<{ user: User; token: string }> {
     try {
-      const response = await this.authService.signup(dto, file);
+      const response = await this.authService.signup(dto, file?.path);
 
       logger.info(
         `[${this.context}] User signup successful. Email: ${dto.email}\n`,

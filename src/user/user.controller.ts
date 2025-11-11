@@ -17,10 +17,10 @@ import { AuthGuard } from '@nestjs/passport';
 import { Transaction, User, Wager } from '@prisma/client';
 import { GetUser } from '../custom/decorators';
 import { FileInterceptor } from '@nestjs/platform-express';
-import * as multer from 'multer';
 import { FundsTransferDTO, GetTransactionsDTO, UpdateProfileDTO } from './dto';
 import { UserService } from './user.service';
 import logger from '@src/common/logger';
+import { UploadService } from '@src/common/config/upload';
 
 @Controller('user')
 @UseGuards(AuthGuard('jwt'))
@@ -39,27 +39,9 @@ export class UserController {
   @Patch('profile')
   @UseInterceptors(
     FileInterceptor('profileImage', {
-      storage: multer.memoryStorage(),
-      limits: { fieldSize: 8 * 1024 * 1024 },
-      fileFilter: (
-        req: Request,
-        file: Express.Multer.File,
-        callback: multer.FileFilterCallback,
-      ): void => {
-        const allowedMimetypes: string[] = [
-          'image/png',
-          'image/heic',
-          'image/jpeg',
-          'image/webp',
-          'image/heif',
-        ];
-
-        if (allowedMimetypes.includes(file.mimetype)) {
-          callback(null, true);
-        } else {
-          callback(null, false);
-        }
-      },
+      fileFilter: UploadService.fileFilter,
+      limits: { fileSize: 8 * 1024 * 1024 },
+      storage: UploadService.storage('user_profile', 'image'),
     }),
   )
   async updateProfile(
@@ -71,7 +53,7 @@ export class UserController {
       const updatedUser = await this.userService.updateProfile(
         user.id,
         dto,
-        file,
+        file?.path,
       );
 
       logger.info(`[${this.context}] Profile updated by ${user.email}.\n`);
