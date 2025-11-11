@@ -16,12 +16,12 @@ This backend service is also designed in a microservice architecture; [check her
 
 - **Framework**: NestJS
 - **Database**: Postgres
-- **File Storage**: AWS S3
+- **File Storage**: Cloudinary
 - **Queues**: BullMQ
 - **Mail**: Resend
 - **Tests**: Jest & Supertest
-- **Secrets**: AWS SecretsManager
 - **Blockchain RPC Providers**: Helius (Solana) & Alchemy (Base)
+- **Observability & Monitoring**: Prometheus and Grafana
 
 ## Getting Started
 
@@ -45,9 +45,10 @@ The database schema is located [here](prisma/schema.prisma). If no schema change
 
 ### 4. Initialization
 
-- Start the dev containers `npm run compose:dev`
-- Check the logs of the `backend` container on Docker Desktop. When the Nest application is fully initialized, the application should be running at: `http://localhost:3000/`
-- If you make changes to the backend code, restart the service using: `npm run compose:restart -- backend`
+- Start the storage and monitoring services: `npm run compose:up`
+- Start the server: `npm run start:dev`
+- When the Nest application is fully initialized, the server should be running at: `http://localhost:3000`
+> The Nest application runs outside Docker.
 
 ### 5. Tests
 
@@ -56,9 +57,15 @@ The database schema is located [here](prisma/schema.prisma). If no schema change
   - Start the test containers: `npm run compose:test`
   - Run the tests: `npm run test:e2e`
 
+### 6. Monitoring
+
+- To view the custom application metrics on Grafana, visit: `http://localhost:3002`.
+- If you add new metrics, update the dashboard [config file](./monitoring/grafana/dashboards/observability.json).
+
 <br>
 
-> If you make changes to any of the compose files in test or development, stop the containers using: `npm run compose:down`. Then, rebuild the docker images using: `npm run compose:build`
+> If you make changes to any of the compose files in test or development, restart the containers using: `npm run compose:restart`.
+> To kill the containers, run `npm run compose:down`.
 
 ## Endpoints
 
