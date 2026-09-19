@@ -4,11 +4,13 @@ import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
 import * as cookieParser from 'cookie-parser';
 import { IoAdapter } from '@nestjs/platform-socket.io';
-import logger from './common/logger';
+import { Logger } from './common/logger';
+import { WinstonModule } from 'nest-winston';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  const port = process.env.PORT ?? 3000;
+  const app = await NestFactory.create(AppModule, {
+    logger: WinstonModule.createLogger({ instance: Logger('Nest') }),
+  });
 
   app.enableCors();
   app.use(helmet());
@@ -26,7 +28,6 @@ async function bootstrap() {
     }),
   );
 
-  await app.listen(port, '0.0.0.0');
-  logger.info(`Application is running on port ${port}\n`);
+  await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
 }
 void bootstrap();

@@ -6,7 +6,7 @@ import { Job } from 'bull';
 import { HelperService } from './helpers';
 import { WagerGateway } from './wager.gateway';
 import { sendEmail } from '@src/common/config/mail';
-import logger from '@src/common/logger';
+import { Logger } from '@src/common/logger';
 
 interface WagerClaimJob {
   claimantId: number;
@@ -17,7 +17,7 @@ interface WagerClaimJob {
 @Injectable()
 @Processor('wager-queue')
 export class WagerProcessor {
-  private readonly context: string = WagerProcessor.name;
+  private readonly logger = Logger(WagerProcessor.name);
 
   constructor(
     private readonly prisma: DbService,
@@ -89,8 +89,8 @@ export class WagerProcessor {
       const opponentMailContent = `The 24-hour window to accept or contest @${claimant.username}'s claim in ${wager.title} wager has elapsed, and the wager has been settled in favour of @${claimant.username}. Better luck next time!`;
       await sendEmail(opponent.email, subject, opponentMailContent);
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while claiming wager prize. Error: ${error.message}.\n`,
+      this.logger.error(
+        `An error occurred while claiming wager prize. Error: ${error.message}.`,
       );
 
       throw error;
@@ -153,8 +153,8 @@ export class WagerProcessor {
 
       return;
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while contesting wager claim. Error: ${error.message}.\n`,
+      this.logger.error(
+        `An error occurred while contesting wager claim. Error: ${error.message}.`,
       );
 
       throw error;

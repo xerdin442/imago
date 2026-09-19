@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
-import logger from '@src/common/logger';
+import { Logger } from '@src/common/logger';
 import { Secrets } from '@src/common/secrets';
 
 @Injectable()
 export class DbService extends PrismaClient {
-  private context = DbService.name;
+  private readonly logger = Logger(DbService.name);
 
   constructor() {
     super({
@@ -26,10 +26,10 @@ export class DbService extends PrismaClient {
         this.user.deleteMany(),
       ]);
 
-      logger.info(`[${this.context}] Database cleaned up for tests.\n`);
+      this.logger.info('Database cleaned up for tests.');
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while cleaning database. Error: ${error.message}.\n`,
+      this.logger.error(
+        `An error occurred while cleaning database. Error: ${error.message}.`,
       );
       throw error;
     }

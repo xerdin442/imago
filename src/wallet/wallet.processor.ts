@@ -6,7 +6,7 @@ import { TransactionStatus, User } from '@prisma/client';
 import { WalletService } from './wallet.service';
 import { DbService } from '@src/db/db.service';
 import { sendEmail } from '@src/common/config/mail';
-import logger from '@src/common/logger';
+import { Logger } from '@src/common/logger';
 
 interface TransactionJob {
   dto: DepositDTO | WithdrawalDTO;
@@ -18,7 +18,7 @@ interface TransactionJob {
 @Injectable()
 @Processor('wallet-queue')
 export class WalletProcessor {
-  private readonly context: string = WalletProcessor.name;
+  private readonly logger = Logger(WalletProcessor.name);
 
   constructor(
     private readonly prisma: DbService,
@@ -40,16 +40,16 @@ export class WalletProcessor {
           const content = `$${dto.amount} has been deposited in your wallet. Your balance is $${user.balance}. Date: ${date}`;
           await sendEmail(user.email, 'Deposit Successful', content);
 
-          logger.info(
-            `[${this.context}] Successful deposit by ${user.email}. Amount: $${dto.amount}\n`,
+          this.logger.info(
+            `Successful deposit by ${user.email}. Amount: $${dto.amount}`,
           );
         } else if (status === 'FAILED') {
           // Notify user of failed deposit
           const content = `Your deposit of $${dto.amount} on ${date} was unsuccessful. Please try again later.`;
           await sendEmail(user.email, 'Failed Deposit', content);
 
-          logger.info(
-            `[${this.context}] Failed deposit by ${user.email}. Amount: $${dto.amount}\n`,
+          this.logger.info(
+            `Failed deposit by ${user.email}. Amount: $${dto.amount}`,
           );
         } else if (status === 'PENDING') {
           // Retry pending transaction after 30 seconds
@@ -82,8 +82,8 @@ export class WalletProcessor {
       // Initiate first attempt to process deposit confirmation
       await initiateDepositConfirmation();
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occured while confirming user deposit for tx: ${dto.txIdentifier}. Error: ${error.message}\n`,
+      this.logger.error(
+        `An error occured while confirming user deposit for tx: ${dto.txIdentifier}. Error: ${error.message}`,
       );
 
       throw error;
@@ -112,16 +112,16 @@ export class WalletProcessor {
             idempotencyKey as string,
           );
 
-      logger.info(
-        `[${this.context}] Successful withdrawal by ${user.email}. Amount: $${dto.amount}\n`,
+      this.logger.info(
+        `Successful withdrawal by ${user.email}. Amount: $${dto.amount}`,
       );
 
       // Check balance of native assets and stablecoins in platform wallet
       await this.walletService.checkTokenBalance(dto.chain);
       await this.walletService.checkNativeAssetBalance(dto.chain);
     } catch (error) {
-      logger.error(
-        `[${this.context}] Failed withdrawal of $${dto.amount} for ${user.email}. Error: ${error.message}\n`,
+      this.logger.error(
+        `Failed withdrawal of $${dto.amount} for ${user.email}. Error: ${error.message}`,
       );
 
       throw error;

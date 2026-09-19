@@ -1,48 +1,43 @@
-import { createLogger, format, Logger, transports } from 'winston';
-import { Secrets } from '../secrets';
+import {
+  createLogger,
+  format,
+  Logger as WinstonLogger,
+  transports,
+} from 'winston';
+import { utilities as nestWinstonUtilities } from 'nest-winston';
 
-const { combine, timestamp, label, printf } = format;
+const { combine, timestamp, label, json } = format;
 
-const myFormat = printf(({ level, message, timestamp, label }) => {
-  // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-  return `${timestamp} ${label} ${level} ${message}`;
-});
+const fileFormat = (context: string) =>
+  combine(label({ label: context }), timestamp(), json());
 
-const newLogger = (env: string): Logger => {
+const consoleFormat = (context: string) =>
+  combine(
+    timestamp(),
+    nestWinstonUtilities.format.nestLike(context, {
+      colors: true,
+      prettyPrint: true,
+    }),
+  );
+
+export const Logger = (context: string): WinstonLogger => {
   return createLogger({
     level: 'debug',
-    format: combine(
-      format.colorize(),
-      label({ label: env }),
-      timestamp(),
-      myFormat,
-    ),
     transports: [
       new transports.File({
         filename: 'error.log',
         level: 'error',
         dirname: './logs',
+        format: fileFormat(context),
       }),
-      new transports.File({ filename: 'combined.log', dirname: './logs' }),
-      new transports.Console(),
+      new transports.File({
+        filename: 'combined.log',
+        dirname: './logs',
+        format: fileFormat(context),
+      }),
+      new transports.Console({
+        format: consoleFormat(context),
+      }),
     ],
   });
 };
-
-let logger: Logger = newLogger('DEFAULT');
-switch (Secrets.NODE_ENV) {
-  case 'production':
-    logger = newLogger('PROD');
-    break;
-  case 'development':
-    logger = newLogger('DEV');
-    break;
-  case 'test':
-    logger = newLogger('TEST');
-    break;
-
-  default:
-    break;
-}
-
-export default logger;

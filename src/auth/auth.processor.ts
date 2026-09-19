@@ -2,12 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { Process, Processor } from '@nestjs/bull';
 import { Job } from 'bull';
 import { sendEmail } from '@src/common/config/mail';
-import logger from '@src/common/logger';
+import { Logger } from '@src/common/logger';
 
 @Injectable()
 @Processor('auth-queue')
 export class AuthProcessor {
-  private readonly context: string = AuthProcessor.name;
+  private readonly logger = Logger(AuthProcessor.name);
 
   constructor() {}
 
@@ -20,8 +20,8 @@ export class AuthProcessor {
 
       await sendEmail(email, subject, content);
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occured while processing onboarding email. Error: ${error.message}\n`,
+      this.logger.error(
+        `An error occured while processing onboarding email. Error: ${error.message}`,
       );
 
       throw error;
@@ -37,8 +37,8 @@ export class AuthProcessor {
 
       await sendEmail(email, subject, content);
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occured while processing OTP email. Error: ${error.message}\n`,
+      this.logger.error(
+        `An error occured while processing OTP email. Error: ${error.message}`,
       );
 
       throw error;

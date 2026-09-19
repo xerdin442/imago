@@ -9,11 +9,11 @@ import {
 } from '../types';
 import { DbService } from '@src/db/db.service';
 import { AuthService } from '@src/auth/auth.service';
-import logger from '../logger';
+import { Logger } from '../logger';
 
 @Injectable()
 export class AppleAuthHandler {
-  private readonly context: string = AppleAuthHandler.name;
+  private readonly logger = Logger(AppleAuthHandler.name);
 
   private readonly client = jwksClient({
     jwksUri: 'https://appleid.apple.com/auth/oauth2/v2/keys',
@@ -75,9 +75,7 @@ export class AppleAuthHandler {
         // Sign in existing user
         const authResponse: SocialAuthUser = await this.authService.login(user);
 
-        logger.info(
-          `[${this.context}] User login successful. Email: ${user.email}\n`,
-        );
+        this.logger.info(`User login successful. Email: ${user.email}`);
 
         return authResponse;
       } else {
@@ -93,9 +91,7 @@ export class AppleAuthHandler {
           const authResponse: SocialAuthUser =
             await this.authService.signup(details);
 
-          logger.info(
-            `[${this.context}] User signup successful. Email: ${details.email}\n`,
-          );
+          this.logger.info(`User signup successful. Email: ${details.email}`);
 
           return authResponse;
         } else {
@@ -103,8 +99,8 @@ export class AppleAuthHandler {
         }
       }
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while validating Apple authentication credentials. Error: ${error.message}\n`,
+      this.logger.error(
+        `An error occurred while validating Apple authentication credentials. Error: ${error.message}`,
       );
 
       throw error;

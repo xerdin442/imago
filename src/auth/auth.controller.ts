@@ -38,7 +38,7 @@ import {
   AppleAuthDTO,
 } from '@src/common/types';
 import { generateCallbackHtml } from './helpers';
-import logger from '@src/common/logger';
+import { Logger } from '@src/common/logger';
 import { RedisClientType } from 'redis';
 import { REDIS_CLIENT } from '@src/common/cache';
 import { Secrets } from '@src/common/secrets';
@@ -47,7 +47,7 @@ import { UploadService } from '@src/common/config/upload';
 
 @Controller('auth')
 export class AuthController {
-  private readonly context: string = AuthController.name;
+  private readonly logger = Logger(AuthController.name);
 
   private readonly GOOGLE_REDIRECT_COOKIE_KEY: string =
     'google_auth_redirect_url';
@@ -73,14 +73,12 @@ export class AuthController {
     try {
       const response = await this.authService.signup(dto, file?.path);
 
-      logger.info(
-        `[${this.context}] User signup successful. Email: ${dto.email}\n`,
-      );
+      this.logger.info(`User signup successful. Email: ${dto.email}`);
 
       return response;
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred during user signup. Error: ${error.message}\n`,
+      this.logger.error(
+        `An error occurred during user signup. Error: ${error.message}`,
       );
 
       throw error;
@@ -95,14 +93,12 @@ export class AuthController {
     try {
       const response = await this.authService.login(dto);
 
-      logger.info(
-        `[${this.context}] User login successful. Email: ${dto.email}\n`,
-      );
+      this.logger.info(`User login successful. Email: ${dto.email}`);
 
       return response;
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred during user login. Error: ${error.message}\n`,
+      this.logger.error(
+        `An error occurred during user login. Error: ${error.message}`,
       );
 
       throw error;
@@ -236,14 +232,12 @@ export class AuthController {
     try {
       await this.authService.logout(user.email);
 
-      logger.info(
-        `[${this.context}] ${user.email} logged out of current session.\n`,
-      );
+      this.logger.info(`${user.email} logged out of current session.`);
 
       return { message: 'Logout successful!' };
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while logging out. Error: ${error.message}\n`,
+      this.logger.error(
+        `An error occurred while logging out. Error: ${error.message}`,
       );
 
       throw error;
@@ -257,14 +251,12 @@ export class AuthController {
     try {
       const qrcode = await this.authService.enable2fa(user.id);
 
-      logger.info(
-        `[${this.context}] ${user.email} enabled two factor authentication.\n`,
-      );
+      this.logger.info(`${user.email} enabled two factor authentication.`);
 
       return { qrcode };
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while enabling two factor authentication. Error: ${error.message}\n`,
+      this.logger.error(
+        `An error occurred while enabling two factor authentication. Error: ${error.message}`,
       );
 
       throw error;
@@ -278,14 +270,12 @@ export class AuthController {
     try {
       await this.authService.disable2fa(user.id);
 
-      logger.info(
-        `[${this.context}] ${user.email} disabled two factor authentication.\n`,
-      );
+      this.logger.info(`${user.email} disabled two factor authentication.`);
 
       return { message: '2FA disabled successfully' };
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while disabling two factor authentication. Error: ${error.message}\n`,
+      this.logger.error(
+        `An error occurred while disabling two factor authentication. Error: ${error.message}`,
       );
 
       throw error;
@@ -303,21 +293,21 @@ export class AuthController {
       const verified = await this.authService.verify2fa(user.id, dto);
 
       if (verified) {
-        logger.info(
-          `[${this.context}] 2FA token verified successfully. Email: ${user.email}\n`,
+        this.logger.info(
+          `2FA token verified successfully. Email: ${user.email}`,
         );
 
         return { message: '2FA token verified successfully' };
       } else {
-        logger.error(
-          `[${this.context}] Invalid 2FA token could not be verified. Email: ${user.email}\n`,
+        this.logger.error(
+          `Invalid 2FA token could not be verified. Email: ${user.email}`,
         );
 
         throw new BadRequestException('Invalid token');
       }
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while verifying 2FA token. Error: ${error.message}\n`,
+      this.logger.error(
+        `An error occurred while verifying 2FA token. Error: ${error.message}`,
       );
 
       throw error;
@@ -332,14 +322,12 @@ export class AuthController {
     try {
       await this.authService.requestPasswordReset(dto);
 
-      logger.info(
-        `[${this.context}] Password reset requested by ${dto.email}.\n`,
-      );
+      this.logger.info(`Password reset requested by ${dto.email}.`);
 
       return { message: 'Password reset OTP has been sent to your email' };
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while requesting for password reset. Error: ${error.message}\n`,
+      this.logger.error(
+        `An error occurred while requesting for password reset. Error: ${error.message}`,
       );
 
       throw error;
@@ -351,14 +339,12 @@ export class AuthController {
   async resendOtp(@Body() dto: ResendOtpDTO): Promise<{ message: string }> {
     try {
       await this.authService.resendOtp(dto.email);
-      logger.info(
-        `[${this.context}] Password reset OTP re-sent to ${dto.email}.\n`,
-      );
+      this.logger.info(`Password reset OTP re-sent to ${dto.email}.`);
 
       return { message: 'Another OTP has been sent to your email' };
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while verifying password reset OTP. Error: ${error.message}\n`,
+      this.logger.error(
+        `An error occurred while verifying password reset OTP. Error: ${error.message}`,
       );
 
       throw error;
@@ -371,14 +357,12 @@ export class AuthController {
     try {
       await this.authService.verifyOtp(dto);
 
-      logger.info(
-        `[${this.context}] OTP verification successful. Email: ${dto.email}\n`,
-      );
+      this.logger.info(`OTP verification successful. Email: ${dto.email}`);
 
       return { message: 'OTP verification successful!' };
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while verifying password reset OTP. Error: ${error.message}\n`,
+      this.logger.error(
+        `An error occurred while verifying password reset OTP. Error: ${error.message}`,
       );
 
       throw error;
@@ -393,14 +377,12 @@ export class AuthController {
     try {
       await this.authService.changePassword(dto);
 
-      logger.info(
-        `[${this.context}] Password reset completed by ${dto.email}.\n`,
-      );
+      this.logger.info(`Password reset completed by ${dto.email}.`);
 
       return { message: 'Password reset complete!' };
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while changing password. Error: ${error.message}\n`,
+      this.logger.error(
+        `An error occurred while changing password. Error: ${error.message}`,
       );
 
       throw error;

@@ -7,7 +7,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Profile, Strategy, VerifyCallback } from 'passport-google-oauth20';
 import { SocialAuthPayload, SocialAuthUser } from '../types';
 import { Request } from 'express';
-import logger from '../logger';
+import { Logger } from '../logger';
 import { LoginDTO } from '@src/auth/dto';
 import { DbService } from '@src/db/db.service';
 import { Secrets } from '../secrets';
@@ -15,7 +15,7 @@ import { AuthService } from '@src/auth/auth.service';
 
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy) {
-  private readonly context: string = GoogleStrategy.name;
+  private readonly logger = Logger(GoogleStrategy.name);
 
   constructor(
     private readonly prisma: DbService,
@@ -60,9 +60,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy) {
         // Sign in existing user
         const authResponse: SocialAuthUser = await this.authService.login(dto);
 
-        logger.info(
-          `[${this.context}] User login successful. Email: ${dto.email}\n`,
-        );
+        this.logger.info(`User login successful. Email: ${dto.email}`);
 
         return done(null, authResponse);
       } else {
@@ -77,15 +75,13 @@ export class GoogleStrategy extends PassportStrategy(Strategy) {
         const authResponse: SocialAuthUser =
           await this.authService.signup(details);
 
-        logger.info(
-          `[${this.context}] User signup successful. Email: ${details.email}\n`,
-        );
+        this.logger.info(`User signup successful. Email: ${details.email}`);
 
         return done(null, authResponse);
       }
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while validating Google authentication strategy. Error: ${error.message}\n`,
+      this.logger.error(
+        `An error occurred while validating Google authentication strategy. Error: ${error.message}`,
       );
 
       if (error instanceof BadRequestException) return done(error, undefined);

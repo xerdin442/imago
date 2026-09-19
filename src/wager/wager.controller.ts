@@ -22,11 +22,11 @@ import {
 } from './dto';
 import { AdminGuard } from '../custom/guards/admin.guard';
 import { WagerService } from './wager.service';
-import logger from '@src/common/logger';
+import { Logger } from '@src/common/logger';
 
 @Controller('wagers')
 export class WagerController {
-  private readonly context: string = WagerController.name;
+  private readonly logger = Logger(WagerController.name);
   constructor(private readonly wagerService: WagerService) {}
 
   @Post('create')
@@ -38,14 +38,12 @@ export class WagerController {
     try {
       const wager = await this.wagerService.createWager(user.id, dto);
 
-      logger.info(
-        `[${this.context}] ${user.email} created a new wager: ${wager.title}.\n`,
-      );
+      this.logger.info(`${user.email} created a new wager: ${wager.title}.`);
 
       return { wager };
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while creating a new wager. Error: ${error.message}.\n`,
+      this.logger.error(
+        `An error occurred while creating a new wager. Error: ${error.message}.`,
       );
 
       throw error;
@@ -64,8 +62,8 @@ export class WagerController {
 
       return { message: 'Wager updated successfully' };
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while updating wager details. Error: ${error.message}.\n`,
+      this.logger.error(
+        `An error occurred while updating wager details. Error: ${error.message}.`,
       );
 
       throw error;
@@ -81,8 +79,8 @@ export class WagerController {
     try {
       return { wager: await this.wagerService.findWagerByInviteCode(dto) };
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while inviting new player to wager. Error: ${error.message}.\n`,
+      this.logger.error(
+        `An error occurred while inviting new player to wager. Error: ${error.message}.`,
       );
 
       throw error;
@@ -99,8 +97,8 @@ export class WagerController {
         wagers: await this.wagerService.populateWagerMarketplace(user.id),
       };
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while populating wager marketplace. Error: ${error.message}.\n`,
+      this.logger.error(
+        `An error occurred while populating wager marketplace. Error: ${error.message}.`,
       );
 
       throw error;
@@ -118,8 +116,8 @@ export class WagerController {
 
       return { message: 'Wager has been added to marketplace!' };
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while adding wager to marketplace. Error: ${error.message}.\n`,
+      this.logger.error(
+        `An error occurred while adding wager to marketplace. Error: ${error.message}.`,
       );
 
       throw error;
@@ -134,8 +132,8 @@ export class WagerController {
     try {
       return { wager: await this.wagerService.getWagerDetails(wagerId) };
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while retrieving wager details. Error: ${error.message}.\n`,
+      this.logger.error(
+        `An error occurred while retrieving wager details. Error: ${error.message}.`,
       );
 
       throw error;
@@ -152,14 +150,12 @@ export class WagerController {
     try {
       const wagerTitle = await this.wagerService.joinWager(user.id, wagerId);
 
-      logger.info(
-        `[${this.context}] ${user.email} joined "${wagerTitle}" wager.\n`,
-      );
+      this.logger.info(`${user.email} joined "${wagerTitle}" wager.`);
 
       return { message: 'Successfully joined wager' };
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while joining a new wager. Error: ${error.message}.\n`,
+      this.logger.error(
+        `An error occurred while joining a new wager. Error: ${error.message}.`,
       );
 
       throw error;
@@ -176,16 +172,16 @@ export class WagerController {
     try {
       const wagerTitle = await this.wagerService.claimWager(user.id, wagerId);
 
-      logger.info(
-        `[${this.context}] ${user.email} claimed the prize in "${wagerTitle}" wager.\n`,
+      this.logger.info(
+        `${user.email} claimed the prize in "${wagerTitle}" wager.`,
       );
 
       return {
         message: 'Prize claimed successfully, awaiting response from opponent',
       };
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while claiming wager prize. Error: ${error.message}.\n`,
+      this.logger.error(
+        `An error occurred while claiming wager prize. Error: ${error.message}.`,
       );
 
       throw error;
@@ -202,8 +198,8 @@ export class WagerController {
       await this.wagerService.acceptWagerClaim(wagerId);
       return { message: 'Wager claim accepted, better luck next time!' };
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while accepting wager prize claim. Error: ${error.message}.\n`,
+      this.logger.error(
+        `An error occurred while accepting wager prize claim. Error: ${error.message}.`,
       );
 
       throw error;
@@ -223,8 +219,8 @@ export class WagerController {
           'Wager claim contested, dispute resolution has been initiated.',
       };
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while contesting wager prize claim. Error: ${error.message}.\n`,
+      this.logger.error(
+        `An error occurred while contesting wager prize claim. Error: ${error.message}.`,
       );
 
       throw error;
@@ -242,8 +238,8 @@ export class WagerController {
 
       return { message: 'Wager deleted successfully' };
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while deleting wager. Error: ${error.message}.\n`,
+      this.logger.error(
+        `An error occurred while deleting wager. Error: ${error.message}.`,
       );
 
       throw error;
@@ -260,8 +256,8 @@ export class WagerController {
         messages: await this.wagerService.getDisputeChatMessages(wagerId),
       };
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while retrieving dispute chat messages. Error: ${error.message}.\n`,
+      this.logger.error(
+        `An error occurred while retrieving dispute chat messages. Error: ${error.message}.`,
       );
 
       throw error;
@@ -280,8 +276,8 @@ export class WagerController {
 
       return { message: 'Dispute resolution successful' };
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while resolving wager dispute. Error: ${error.message}.\n`,
+      this.logger.error(
+        `An error occurred while resolving wager dispute. Error: ${error.message}.`,
       );
 
       throw error;

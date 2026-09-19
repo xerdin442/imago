@@ -38,14 +38,14 @@ import { RedisClientType } from 'redis';
 import { DbService } from '@src/db/db.service';
 import { MetricsService } from '@src/metrics/metrics.service';
 import { HelperService } from './helpers';
-import logger from '@src/common/logger';
+import { Logger } from '@src/common/logger';
 import { sendEmail } from '@src/common/config/mail';
 import { REDIS_CLIENT } from '@src/common/cache';
 import { Secrets } from '@src/common/secrets';
 
 @Injectable()
 export class WalletService {
-  private readonly context: string = WalletService.name;
+  private readonly logger = Logger(WalletService.name);
 
   private readonly thirdweb: ThirdwebClient;
   private readonly BASE_USDC_TOKEN_ADDRESS: string;
@@ -128,8 +128,8 @@ export class WalletService {
         return null;
       }
 
-      logger.error(
-        `[${this.context}] An error occurred while resolving domain name: ${domain}. Error: ${error.message}\n`,
+      this.logger.error(
+        `An error occurred while resolving domain name: ${domain}. Error: ${error.message}`,
       );
 
       throw error;
@@ -243,8 +243,8 @@ export class WalletService {
             data: { retries: { increment: 1 } },
           });
 
-          logger.warn(
-            `[${this.context}] Deposit transaction (Tx: ${dto.txIdentifier}) is pending confirmation and a retry has been scheduled. Attempt: ${updatedTx.retries}\n`,
+          this.logger.warn(
+            `Deposit transaction (Tx: ${dto.txIdentifier}) is pending confirmation and a retry has been scheduled. Attempt: ${updatedTx.retries}`,
           );
 
           return 'PENDING';
@@ -383,8 +383,8 @@ export class WalletService {
             data: { retries: { increment: 1 } },
           });
 
-          logger.warn(
-            `[${this.context}] Deposit transaction (Tx: ${dto.txIdentifier}) is pending confirmation and a retry has been scheduled. Attempt: ${updatedTx.retries}\n`,
+          this.logger.warn(
+            `Deposit transaction (Tx: ${dto.txIdentifier}) is pending confirmation and a retry has been scheduled. Attempt: ${updatedTx.retries}`,
           );
 
           return 'PENDING';
@@ -513,8 +513,8 @@ export class WalletService {
         this.gateway.sendTransactionStatus(user.email, updatedTx);
         await this.settleIdempotencyKey(idempotencyKey, 'FAILED');
 
-        logger.warn(
-          `[${this.context}] Withdrawal declined for insufficient balance. User: ${user.email}, Amount: $${dto.amount}\n`,
+        this.logger.warn(
+          `Withdrawal declined for insufficient balance. User: ${user.email}, Amount: $${dto.amount}`,
         );
 
         return;
@@ -594,8 +594,8 @@ export class WalletService {
       const content = `Your withdrawal of $${dto.amount} on ${date} was unsuccessful. Please try again later.`;
       await sendEmail(user.email, 'Failed Withdrawal', content);
 
-      logger.error(
-        `[${this.context}] An error occurred while completing withdrawal from platform ethereum wallet. Error: ${error.message}\n`,
+      this.logger.error(
+        `An error occurred while completing withdrawal from platform ethereum wallet. Error: ${error.message}`,
       );
 
       return;
@@ -629,8 +629,8 @@ export class WalletService {
         this.gateway.sendTransactionStatus(user.email, updatedTx);
         await this.settleIdempotencyKey(idempotencyKey, 'FAILED');
 
-        logger.warn(
-          `[${this.context}] Withdrawal declined for insufficient balance. User: ${user.email}, Amount: $${dto.amount}\n`,
+        this.logger.warn(
+          `Withdrawal declined for insufficient balance. User: ${user.email}, Amount: $${dto.amount}`,
         );
 
         return;
@@ -693,8 +693,8 @@ export class WalletService {
       const content = `Your withdrawal of $${dto.amount} on ${date} was unsuccessful. Please try again later.`;
       await sendEmail(user.email, 'Failed Withdrawal', content);
 
-      logger.error(
-        `[${this.context}] An error occurred while completing withdrawal from platform solana wallet. Error: ${error.message}\n`,
+      this.logger.error(
+        `An error occurred while completing withdrawal from platform solana wallet. Error: ${error.message}`,
       );
 
       return;
@@ -761,13 +761,13 @@ export class WalletService {
         const content = `The platform wallet on ${chain} has a native asset balance of ${currentBalance}${symbol}`;
         await sendEmail(admin.email, 'Low Balance Alert', content);
 
-        logger.warn(
-          `[${this.context}] The platform wallet on ${chain} has a low native asset balance. Balance: ${currentBalance}${symbol}\n`,
+        this.logger.warn(
+          `The platform wallet on ${chain} has a low native asset balance. Balance: ${currentBalance}${symbol}`,
         );
       }
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occured while checking native asset balance of platform wallet on ${chain}\n`,
+      this.logger.error(
+        `An error occured while checking native asset balance of platform wallet on ${chain}`,
       );
 
       throw error;
@@ -855,8 +855,8 @@ export class WalletService {
           const content = `The platform wallet has a BONK balance of ${currentBalance} BONK.`;
           await sendEmail(admin.email, 'Low Balance Alert', content);
 
-          logger.warn(
-            `[${this.context}] The platform wallet has a low BONK balance. Balance: ${currentBalance} BONK.\n`,
+          this.logger.warn(
+            `The platform wallet has a low BONK balance. Balance: ${currentBalance} BONK.`,
           );
 
           return;
@@ -872,15 +872,15 @@ export class WalletService {
         const content = `The platform wallet on ${chainOrToken.toLowerCase()} has a stablecoin balance of ${currentBalance} USDC.`;
         await sendEmail(admin.email, 'Low Balance Alert', content);
 
-        logger.warn(
-          `[${this.context}] The platform wallet on ${chainOrToken} has a low stablecoin balance. Balance: ${currentBalance} USDC.\n`,
+        this.logger.warn(
+          `The platform wallet on ${chainOrToken} has a low stablecoin balance. Balance: ${currentBalance} USDC.`,
         );
 
         return;
       }
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occured while checking stablecoin balance of platform wallet on ${chainOrToken}\n`,
+      this.logger.error(
+        `An error occured while checking stablecoin balance of platform wallet on ${chainOrToken}`,
       );
 
       throw error;

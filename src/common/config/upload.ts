@@ -6,8 +6,6 @@ import { randomUUID } from 'crypto';
 import { Secrets } from '../secrets';
 
 class UploadConfig {
-  private readonly context: string = UploadConfig.name;
-
   constructor() {
     v2.config({
       cloud_name: Secrets.CLOUD_NAME,

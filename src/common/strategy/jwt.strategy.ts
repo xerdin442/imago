@@ -4,11 +4,11 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { User } from '@prisma/client';
 import { DbService } from '@src/db/db.service';
 import { Secrets } from '../secrets';
-import logger from '../logger';
+import { Logger } from '../logger';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  private readonly context = JwtStrategy.name;
+  private readonly logger = Logger(JwtStrategy.name);
 
   constructor(private readonly prisma: DbService) {
     super({
@@ -33,8 +33,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
       return user;
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while validating authorization token. Error: ${error.message}\n`,
+      this.logger.error(
+        `An error occurred while validating authorization token. Error: ${error.message}`,
       );
 
       throw error;

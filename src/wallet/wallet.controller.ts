@@ -20,12 +20,12 @@ import { HelperService } from './helpers';
 import { WalletService } from './wallet.service';
 import { REDIS_CLIENT } from '@src/common/cache';
 import { RedisClientType } from 'redis';
-import logger from '@src/common/logger';
+import { Logger } from '@src/common/logger';
 
 @Controller('wallet')
 @UseGuards(AuthGuard('jwt'))
 export class WalletController {
-  private readonly context: string = WalletController.name;
+  private readonly logger = Logger(WalletController.name);
 
   constructor(
     private readonly helper: HelperService,
@@ -72,8 +72,8 @@ export class WalletController {
 
       return { transaction };
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while processing user deposit. Error: ${error.message}\n`,
+      this.logger.error(
+        `An error occurred while processing user deposit. Error: ${error.message}`,
       );
 
       throw error;
@@ -105,9 +105,7 @@ export class WalletController {
       );
 
       if (!claimed) {
-        logger.warn(
-          `[${this.context}] Duplicate withdrawal attempts by ${user.email}\n`,
-        );
+        this.logger.warn(`Duplicate withdrawal attempts by ${user.email}`);
 
         const existingWithdrawal = await this.redis.get(idempotencyKey);
         const { status } = JSON.parse(existingWithdrawal ?? '{}') as {
@@ -195,8 +193,8 @@ export class WalletController {
         await this.redis.del(idempotencyKey);
       }
 
-      logger.error(
-        `[${this.context}] An error occurred while processing user withdrawal. Error: ${error.message}\n`,
+      this.logger.error(
+        `An error occurred while processing user withdrawal. Error: ${error.message}`,
       );
 
       throw error;
@@ -208,8 +206,8 @@ export class WalletController {
     try {
       return { rewards: await this.walletService.getRewards(user.id) };
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while fetching user rewards. Error: ${error.message}\n`,
+      this.logger.error(
+        `An error occurred while fetching user rewards. Error: ${error.message}`,
       );
 
       throw error;
@@ -260,8 +258,8 @@ export class WalletController {
         message: `Your rewards have been redeemed to BONK tokens and transferred to your wallet. Verify the transaction here: https://solscan.io/tx/${signature}?cluster=mainnet`,
       };
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while redeeming user rewards. Error: ${error.message}\n`,
+      this.logger.error(
+        `An error occurred while redeeming user rewards. Error: ${error.message}`,
       );
 
       throw error;
@@ -285,8 +283,8 @@ export class WalletController {
         message: 'Your rewards have been converted and added to your balance',
       };
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while converting user rewards. Error: ${error.message}\n`,
+      this.logger.error(
+        `An error occurred while converting user rewards. Error: ${error.message}`,
       );
 
       throw error;

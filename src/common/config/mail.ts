@@ -1,7 +1,9 @@
 import * as cheerio from 'cheerio';
 import { Attachment, Resend } from 'resend';
 import { Secrets } from '../secrets';
-import logger from '../logger';
+import { Logger } from '../logger';
+
+const logger = Logger('Mail Service');
 
 export const sendEmail = async (
   recipient: string,
@@ -9,8 +11,6 @@ export const sendEmail = async (
   content: string,
   attachments?: Attachment[],
 ): Promise<void> => {
-  const context: string = 'Mail Service';
-
   // Generate HTML from email content
   const $ = cheerio.load(content);
   const htmlContent = $.html();
@@ -28,15 +28,13 @@ export const sendEmail = async (
   });
 
   if (response.data) {
-    logger.info(
-      `[${context}] "${subject}" email sent successfully to ${recipient}.\n`,
-    );
+    logger.info(`"${subject}" email sent successfully to ${recipient}.`);
     return;
   }
 
   if (response.error) {
     logger.error(
-      `[${context}] An error occured while sending "${subject}" email to ${recipient}. Error: ${response.error.message}\n`,
+      `An error occured while sending "${subject}" email to ${recipient}. Error: ${response.error.message}`,
     );
     return;
   }

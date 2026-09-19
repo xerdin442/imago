@@ -12,7 +12,7 @@ import {
 import { UseFilters, UsePipes, ValidationPipe } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { DbService } from '@src/db/db.service';
-import logger from '@src/common/logger';
+import { Logger } from '@src/common/logger';
 
 @UsePipes(
   new ValidationPipe({ exceptionFactory: (errors) => new WsException(errors) }),
@@ -23,7 +23,7 @@ export class WagerGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   private readonly server: Server;
 
-  private readonly context: string = WagerGateway.name;
+  private readonly logger = Logger(WagerGateway.name);
 
   constructor(private readonly prisma: DbService) {}
 
@@ -41,12 +41,10 @@ export class WagerGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       client.data.email = email; // Attach email to the socket instance
 
-      logger.info(
-        `[${this.context}] Client connected to wager gateway: ${email}\n`,
-      );
+      this.logger.info(`Client connected to wager gateway: ${email}`);
     } catch (error) {
-      logger.info(
-        `[${this.context}] An error occurred while connecting to wager gateway. Error: ${error.message}\n`,
+      this.logger.info(
+        `An error occurred while connecting to wager gateway. Error: ${error.message}`,
       );
 
       throw error;
@@ -57,11 +55,11 @@ export class WagerGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       const email = client.data?.email as string;
       if (email) {
-        logger.info(`[${this.context}] Client disconnected: ${email}`);
+        this.logger.info(`Client disconnected: ${email}`);
       }
     } catch (error) {
-      logger.info(
-        `[${this.context}] An error occurred while disconnecting from wager gateway. Error: ${error.message}\n`,
+      this.logger.info(
+        `An error occurred while disconnecting from wager gateway. Error: ${error.message}`,
       );
 
       throw error;
@@ -94,8 +92,8 @@ export class WagerGateway implements OnGatewayConnection, OnGatewayDisconnect {
         if (client) await client.join(`room-${chatId}`);
       }
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while joining private chat. Error: ${error.message}`,
+      this.logger.error(
+        `An error occurred while joining private chat. Error: ${error.message}`,
       );
 
       throw error;
@@ -124,8 +122,8 @@ export class WagerGateway implements OnGatewayConnection, OnGatewayDisconnect {
         time: message.createdAt,
       });
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while receiving new messages in chat. Error: ${error.message}`,
+      this.logger.error(
+        `An error occurred while receiving new messages in chat. Error: ${error.message}`,
       );
 
       throw error;

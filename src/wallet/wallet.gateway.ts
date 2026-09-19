@@ -11,7 +11,7 @@ import { UseFilters, UsePipes, ValidationPipe } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { Transaction } from '@prisma/client';
 import { DbService } from '@src/db/db.service';
-import logger from '@src/common/logger';
+import { Logger } from '@src/common/logger';
 
 @UsePipes(
   new ValidationPipe({ exceptionFactory: (errors) => new WsException(errors) }),
@@ -22,7 +22,7 @@ export class WalletGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   private readonly server: Server;
 
-  private readonly context: string = WalletGateway.name;
+  private readonly logger = Logger(WalletGateway.name);
 
   constructor(private readonly prisma: DbService) {}
 
@@ -40,12 +40,10 @@ export class WalletGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       client.data.email = email; // Attach email to the socket instance
 
-      logger.info(
-        `[${this.context}] Client connected to wallet gateway: ${email}\n`,
-      );
+      this.logger.info(`Client connected to wallet gateway: ${email}`);
     } catch (error) {
-      logger.info(
-        `[${this.context}] An error occurred while connecting to wallet gateway. Error: ${error.message}\n`,
+      this.logger.info(
+        `An error occurred while connecting to wallet gateway. Error: ${error.message}`,
       );
 
       throw error;
@@ -56,11 +54,11 @@ export class WalletGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       const email = client.data?.email as string;
       if (email) {
-        logger.info(`[${this.context}] Client disconnected: ${email}`);
+        this.logger.info(`Client disconnected: ${email}`);
       }
     } catch (error) {
-      logger.info(
-        `[${this.context}] An error occurred while disconnecting from wallet gateway. Error: ${error.message}\n`,
+      this.logger.info(
+        `An error occurred while disconnecting from wallet gateway. Error: ${error.message}`,
       );
 
       throw error;
@@ -81,8 +79,8 @@ export class WalletGateway implements OnGatewayConnection, OnGatewayDisconnect {
         );
       }
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while notifying client of transaction status. Error: ${error.message}`,
+      this.logger.error(
+        `An error occurred while notifying client of transaction status. Error: ${error.message}`,
       );
 
       throw error;

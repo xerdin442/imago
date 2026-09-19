@@ -12,12 +12,12 @@ import {
 import { AdminAuthDTO, CreateAdminDTO } from './dto';
 import { SuperAdminGuard } from '../custom/guards/admin.guard';
 import { AdminService } from './admin.service';
-import logger from '@src/common/logger';
+import { Logger } from '@src/common/logger';
 import { Admin, Chat } from '@prisma/client';
 
 @Controller('admin')
 export class AdminController {
-  private readonly context: string = AdminController.name;
+  private readonly logger = Logger(AdminController.name);
 
   constructor(private readonly adminService: AdminService) {}
 
@@ -26,14 +26,12 @@ export class AdminController {
     try {
       await this.adminService.signup(dto);
 
-      logger.info(
-        `[${this.context}] Super Admin profile created by ${dto.email}.\n`,
-      );
+      this.logger.info(`Super Admin profile created by ${dto.email}.`);
 
       return { message: 'Super Admin created successfully' };
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred during super admin signup. Error: ${error.message}.\n`,
+      this.logger.error(
+        `An error occurred during super admin signup. Error: ${error.message}.`,
       );
 
       throw error;
@@ -46,14 +44,12 @@ export class AdminController {
     try {
       const admin = await this.adminService.login(dto);
 
-      logger.info(
-        `[${this.context}] Admin profile login successful. Email: ${dto.email}.\n`,
-      );
+      this.logger.info(`Admin profile login successful. Email: ${dto.email}.`);
 
       return { admin };
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred during admin login. Error: ${error.message}.\n`,
+      this.logger.error(
+        `An error occurred during admin login. Error: ${error.message}.`,
       );
 
       throw error;
@@ -66,8 +62,8 @@ export class AdminController {
     try {
       return { admins: await this.adminService.getAllAdmins() };
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while retrieving profile details of sub admins. Error: ${error.message}.\n`,
+      this.logger.error(
+        `An error occurred while retrieving profile details of sub admins. Error: ${error.message}.`,
       );
 
       throw error;
@@ -81,14 +77,14 @@ export class AdminController {
     try {
       await this.adminService.addAddmin(dto);
 
-      logger.info(
-        `[${this.context}] ${dto.email} has been added as a dispute resolution admin.\n`,
+      this.logger.info(
+        `${dto.email} has been added as a dispute resolution admin.`,
       );
 
       return { message: 'New admin added successfully' };
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while adding a new admin. Error: ${error.message}.\n`,
+      this.logger.error(
+        `An error occurred while adding a new admin. Error: ${error.message}.`,
       );
 
       throw error;
@@ -104,14 +100,14 @@ export class AdminController {
     try {
       const email = await this.adminService.removeAddmin(adminId);
 
-      logger.info(
-        `[${this.context}] ${email} has been removed as a dispute resolution admin.\n`,
+      this.logger.info(
+        `${email} has been removed as a dispute resolution admin.`,
       );
 
       return { message: 'Admin profile deleted successfully' };
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while deleting admin profile. Error: ${error.message}.\n`,
+      this.logger.error(
+        `An error occurred while deleting admin profile. Error: ${error.message}.`,
       );
 
       throw error;
@@ -127,8 +123,8 @@ export class AdminController {
         chats: await this.adminService.getDisputeChats(adminId),
       };
     } catch (error) {
-      logger.error(
-        `[${this.context}] An error occurred while retrieving admin's dispute chats. Error: ${error.message}.\n`,
+      this.logger.error(
+        `An error occurred while retrieving admin's dispute chats. Error: ${error.message}.`,
       );
 
       throw error;
