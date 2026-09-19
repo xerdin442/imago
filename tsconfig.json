@@ -20,6 +20,6 @@
     "resolveJsonModule": true,
     "paths": {
       "@src/*": ["src/*"]
-    },    
+    }
   }
 }

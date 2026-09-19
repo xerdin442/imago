@@ -14,16 +14,6 @@ jest.mock('crypto', () => ({
   randomUUID: jest.fn(() => 'part1-part2-part3-part4'),
 }));
 
-jest.mock('@nestjs/config', () => ({
-  ConfigService: jest.fn().mockImplementation(() => ({
-    getOrThrow: jest.fn((key: string) => {
-      if (key === 'APP_NAME') return 'Wager Application';
-
-      return undefined;
-    }),
-  })),
-}));
-
 describe('Admin Service', () => {
   let adminService: AdminService;
   let prisma: DeepMocked<DbService>;

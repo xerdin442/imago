@@ -23,17 +23,6 @@ jest.mock('crypto', () => ({
   randomUUID: jest.fn(() => mockUuid),
 }));
 
-jest.mock('@nestjs/config', () => ({
-  ConfigService: jest.fn().mockImplementation(() => ({
-    getOrThrow: jest.fn((key: string) => {
-      if (key === 'APP_NAME') return 'Wager Application';
-      if (key === 'SOCIAL_AUTH_PASSWORD') return 'social-auth-password';
-
-      return undefined;
-    }),
-  })),
-}));
-
 describe('Auth Service', () => {
   let authService: AuthService;
   let jwt: DeepMocked<JwtService>;

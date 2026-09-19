@@ -6,13 +6,14 @@ import * as cookieParser from 'cookie-parser';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { Logger } from './common/logger';
 import { WinstonModule } from 'nest-winston';
+import { Secrets } from './common/secrets';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: WinstonModule.createLogger({ instance: Logger('Nest') }),
   });
 
-  app.enableCors();
+  app.enableCors({ origin: Secrets.CORS_ORIGINS });
   app.use(helmet());
   app.use(cookieParser());
   app.useWebSocketAdapter(new IoAdapter(app));

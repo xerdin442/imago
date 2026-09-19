@@ -52,18 +52,6 @@ jest.mock('thirdweb', () => ({
   sendAndConfirmTransaction: jest.fn(),
 }));
 
-jest.mock('@nestjs/config', () => ({
-  ConfigService: jest.fn().mockImplementation(() => ({
-    getOrThrow: jest.fn((key: string) => {
-      if (key === 'NODE_ENV') return 'test';
-      if (key === 'COINGECKO_API_KEY') return 'coingecko-api-key';
-      if (key === 'THIRDWEB_API_KEY') return 'thirdweb-api-key';
-
-      return undefined;
-    }),
-  })),
-}));
-
 jest.mock('thirdweb/extensions/erc20', () => ({
   ...jest.requireActual('thirdweb/extensions/erc20'),
   transfer: jest.fn(),

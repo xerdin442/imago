@@ -16,6 +16,10 @@ export const Secrets = {
   REDIS_HOST: config.getOrThrow<string>('REDIS_HOST'),
   REDIS_PASSWORD: config.getOrThrow<string>('REDIS_PASSWORD'),
   REDIS_URL: config.getOrThrow<string>('REDIS_URL'),
+  CORS_ORIGINS: config
+    .getOrThrow<string>('CORS_ORIGINS')
+    .split(',')
+    .map((origin) => origin.trim()),
   DEFAULT_IMAGE: config.getOrThrow<string>('DEFAULT_IMAGE'),
   RESEND_EMAIL_API_KEY: config.getOrThrow<string>('RESEND_EMAIL_API_KEY'),
   APP_NAME: config.getOrThrow<string>('APP_NAME'),

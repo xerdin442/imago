@@ -5,7 +5,7 @@ export default {
   preset: 'ts-jest',
   testEnvironment: 'node',
   moduleFileExtensions: ['js', 'json', 'ts'],
-  rootDir: '../../',
+  rootDir: '../',
   testRegex: '.e2e-spec.ts$',
   moduleDirectories: ['node_modules', '<rootDir>'],
   moduleNameMapper: pathsToModuleNameMapper(compilerOptions.paths, {
