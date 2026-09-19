@@ -7,7 +7,6 @@ import {
   LAMPORTS_PER_SOL,
   PublicKey,
   TokenBalance,
-  SendTransactionError as SolanaTransactionError,
 } from '@solana/web3.js';
 import { Chain, Transaction, TransactionStatus, User } from '@prisma/client';
 import { hdkey, Wallet } from '@ethereumjs/wallet';
@@ -170,25 +169,17 @@ export class WalletService {
 
   async updateDbAfterTransaction(
     tx: Transaction,
-    txIdentifier: string,
+    txIdentifier: string | null,
     status: TransactionStatus,
   ): Promise<{ user: User; updatedTx: Transaction }> {
     try {
       const { id: txId, type, userId, amount } = tx;
 
-      // Update user balance
-      if (status === 'SUCCESS') {
-        if (type === 'WITHDRAWAL') {
-          await this.prisma.user.update({
-            where: { id: userId },
-            data: { balance: { decrement: amount } },
-          });
-        } else {
-          await this.prisma.user.update({
-            where: { id: userId },
-            data: { balance: { increment: amount } },
-          });
-        }
+      if (status === 'SUCCESS' && type === 'DEPOSIT') {
+        await this.prisma.user.update({
+          where: { id: userId },
+          data: { balance: { increment: amount } },
+        });
       }
 
       // Update transaction details
@@ -202,6 +193,35 @@ export class WalletService {
     } catch (error) {
       throw error;
     }
+  }
+
+  private async reserveBalance(
+    userId: number,
+    amount: number,
+  ): Promise<boolean> {
+    const { count } = await this.prisma.user.updateMany({
+      where: { id: userId, balance: { gte: amount } },
+      data: { balance: { decrement: amount } },
+    });
+
+    return count === 1;
+  }
+
+  private async refundBalance(userId: number, amount: number): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { balance: { increment: amount } },
+    });
+  }
+
+  private async settleIdempotencyKey(
+    redis: RedisClientType,
+    idempotencyKey: string,
+    status: 'COMPLETE' | 'FAILED',
+  ): Promise<void> {
+    const ttl = await redis.ttl(idempotencyKey);
+    await redis.set(idempotencyKey, JSON.stringify({ status }));
+    if (ttl > 0) await redis.expire(idempotencyKey, ttl);
   }
 
   async processDepositOnBase(
@@ -482,6 +502,31 @@ export class WalletService {
     );
 
     try {
+      // Atomically debit the balance before touching the chain. If two
+      // withdrawal requests race each other, only one wins this check.
+      const reserved = await this.reserveBalance(
+        transaction.userId,
+        dto.amount,
+      );
+
+      if (!reserved) {
+        const { user, updatedTx } = await this.updateDbAfterTransaction(
+          transaction,
+          null,
+          'FAILED',
+        );
+
+        this.metrics.incrementCounter('failed_withdrawals', metricLabels);
+        this.gateway.sendTransactionStatus(user.email, updatedTx);
+        await this.settleIdempotencyKey(redis, idempotencyKey, 'FAILED');
+
+        logger.warn(
+          `[${this.context}] Withdrawal declined for insufficient balance. User: ${user.email}, Amount: $${dto.amount}\n`,
+        );
+
+        return;
+      }
+
       const platformWallet = this.getPlatformWallet('BASE') as Wallet;
       const privateKey = platformWallet.getPrivateKeyString();
 
@@ -530,9 +575,7 @@ export class WalletService {
       this.gateway.sendTransactionStatus(user.email, updatedTx);
 
       // Update status of idempotency key
-      const ttl = await redis.ttl(idempotencyKey);
-      await redis.set(idempotencyKey, JSON.stringify({ status: 'COMPLETE' }));
-      await redis.expire(idempotencyKey, ttl);
+      await this.settleIdempotencyKey(redis, idempotencyKey, 'COMPLETE');
 
       // Notify user of successful withdrawal
       const date: string = updatedTx.createdAt.toISOString();
@@ -541,11 +584,28 @@ export class WalletService {
 
       return;
     } catch (error) {
+      // Refund the reserved balance since the onchain transfer never happened
+      await this.refundBalance(transaction.userId, dto.amount);
+
+      const { user, updatedTx } = await this.updateDbAfterTransaction(
+        transaction,
+        null,
+        'FAILED',
+      );
+
+      this.metrics.incrementCounter('failed_withdrawals', metricLabels);
+      this.gateway.sendTransactionStatus(user.email, updatedTx);
+      await this.settleIdempotencyKey(redis, idempotencyKey, 'FAILED');
+
+      const date: string = updatedTx.createdAt.toISOString();
+      const content = `Your withdrawal of $${dto.amount} on ${date} was unsuccessful. Please try again later.`;
+      await sendEmail(user.email, 'Failed Withdrawal', content);
+
       logger.error(
         `[${this.context}] An error occurred while completing withdrawal from platform ethereum wallet. Error: ${error.message}\n`,
       );
 
-      throw error;
+      return;
     } finally {
       redis.destroy();
     }
@@ -559,7 +619,6 @@ export class WalletService {
     let signature: string = '';
     const metricLabels: string[] = [dto.chain.toLowerCase()];
 
-    // Initialize Redis connection
     const redis: RedisClientType = await connectToRedis(
       Secrets.REDIS_URL,
       'Idempotency Keys',
@@ -567,6 +626,31 @@ export class WalletService {
     );
 
     try {
+      // Atomically debit the balance before touching the chain. If two
+      // withdrawal requests race each other, only one wins this check.
+      const reserved = await this.reserveBalance(
+        transaction.userId,
+        dto.amount,
+      );
+
+      if (!reserved) {
+        const { user, updatedTx } = await this.updateDbAfterTransaction(
+          transaction,
+          null,
+          'FAILED',
+        );
+
+        this.metrics.incrementCounter('failed_withdrawals', metricLabels);
+        this.gateway.sendTransactionStatus(user.email, updatedTx);
+        await this.settleIdempotencyKey(redis, idempotencyKey, 'FAILED');
+
+        logger.warn(
+          `[${this.context}] Withdrawal declined for insufficient balance. User: ${user.email}, Amount: $${dto.amount}\n`,
+        );
+
+        return;
+      }
+
       const sender = this.getPlatformWallet('SOLANA') as Keypair;
       const recipient = new PublicKey(dto.address);
 
@@ -598,9 +682,7 @@ export class WalletService {
       this.gateway.sendTransactionStatus(user.email, updatedTx);
 
       // Update status of idempotency key
-      const ttl = await redis.ttl(idempotencyKey);
-      await redis.set(idempotencyKey, JSON.stringify({ status: 'COMPLETE' }));
-      await redis.expire(idempotencyKey, ttl);
+      await this.settleIdempotencyKey(redis, idempotencyKey, 'COMPLETE');
 
       // Notify user of successful withdrawal
       const date: string = updatedTx.createdAt.toISOString();
@@ -609,33 +691,28 @@ export class WalletService {
 
       return;
     } catch (error) {
-      if (error instanceof SolanaTransactionError) {
-        // Store failed transaction details
-        const { user, updatedTx } = await this.updateDbAfterTransaction(
-          transaction,
-          signature,
-          'FAILED',
-        );
+      // Refund the reserved balance since the onchain transfer never happened
+      await this.refundBalance(transaction.userId, dto.amount);
 
-        // Update withdrawal metrics
-        this.metrics.incrementCounter('failed_withdrawals', metricLabels);
+      const { user, updatedTx } = await this.updateDbAfterTransaction(
+        transaction,
+        signature || null,
+        'FAILED',
+      );
 
-        // Notify client of transaction status
-        this.gateway.sendTransactionStatus(user.email, updatedTx);
+      this.metrics.incrementCounter('failed_withdrawals', metricLabels);
+      this.gateway.sendTransactionStatus(user.email, updatedTx);
+      await this.settleIdempotencyKey(redis, idempotencyKey, 'FAILED');
 
-        // Notify user of failed withdrawal
-        const date: string = updatedTx.createdAt.toISOString();
-        const content = `Your withdrawal of $${dto.amount} on ${date} was unsuccessful. Please try again later.`;
-        await sendEmail(user.email, 'Failed Withdrawal', content);
+      const date: string = updatedTx.createdAt.toISOString();
+      const content = `Your withdrawal of $${dto.amount} on ${date} was unsuccessful. Please try again later.`;
+      await sendEmail(user.email, 'Failed Withdrawal', content);
 
-        logger.error(
-          `[${this.context}] An error occurred while completing withdrawal from platform solana wallet. Error: ${error.message}\n`,
-        );
+      logger.error(
+        `[${this.context}] An error occurred while completing withdrawal from platform solana wallet. Error: ${error.message}\n`,
+      );
 
-        return;
-      }
-
-      throw error;
+      return;
     } finally {
       redis.destroy();
     }

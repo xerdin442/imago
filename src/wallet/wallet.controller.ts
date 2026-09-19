@@ -93,6 +93,8 @@ export class WalletController {
       Secrets.IDEMPOTENCY_KEYS_STORE_INDEX,
     );
 
+    let claimedIdempotencyKey = false;
+
     try {
       const { address, chain, amount } = dto;
 
@@ -101,16 +103,28 @@ export class WalletController {
         throw new BadRequestException('"Idempotency-Key" header is required');
       }
 
-      // Check if user has attempted similar withdrawal within the last 15 mins
-      const existingWithdrawal = await redis.get(idempotencyKey);
-      if (existingWithdrawal) {
+      // Atomically claim the idempotency key
+      const claimed = await redis.set(
+        idempotencyKey,
+        JSON.stringify({ status: 'PROCESSING' }),
+        { condition: 'NX', expiration: { type: 'EX', value: 900 } },
+      );
+
+      if (!claimed) {
         logger.warn(
           `[${this.context}] Duplicate withdrawal attempts by ${user.email}\n`,
         );
 
-        const { status } = JSON.parse(existingWithdrawal) as { status: string };
+        const existingWithdrawal = await redis.get(idempotencyKey);
+        const { status } = JSON.parse(existingWithdrawal ?? '{}') as {
+          status?: string;
+        };
 
-        if (status === 'PROCESSING') {
+        if (status === 'FAILED') {
+          return {
+            message: `Your withdrawal of ${amount} was unsuccessful. Please try again.`,
+          };
+        } else if (status === 'PROCESSING') {
           return {
             message: `Your withdrawal of ${amount} is being processed`,
           };
@@ -118,6 +132,8 @@ export class WalletController {
           return { message: `Your withdrawal of ${amount} has been processed` };
         }
       }
+
+      claimedIdempotencyKey = true;
 
       // Throw if the domain name is an ENS domain
       const isENSdomain = /(?<!\.base)\.eth$/;
@@ -135,13 +151,8 @@ export class WalletController {
         );
 
         if (!resolvedAddress) {
-          let nameService: string = '';
-          chain === 'BASE'
-            ? (nameService = 'Basename')
-            : (nameService = 'SNS domain');
-
           throw new BadRequestException(
-            `Invalid or unregistered ${nameService}`,
+            `Invalid or unregistered ${chain === 'BASE' ? 'Basename' : 'SNS domain'}`,
           );
         }
 
@@ -175,13 +186,6 @@ export class WalletController {
         dto,
       );
 
-      // Store idempotency key to prevent similar withdrawal attempts within the next 15 mins
-      await redis.setEx(
-        idempotencyKey,
-        900,
-        JSON.stringify({ status: 'PROCESSING' }),
-      );
-
       // Complete processing of withdrawal
       await this.walletQueue.add('withdrawal', {
         dto,
@@ -192,11 +196,18 @@ export class WalletController {
 
       return { transaction };
     } catch (error) {
+      // Release the key on validation failure so a corrected retry isn't blocked
+      if (claimedIdempotencyKey && idempotencyKey) {
+        await redis.del(idempotencyKey);
+      }
+
       logger.error(
         `[${this.context}] An error occurred while processing user withdrawal. Error: ${error.message}\n`,
       );
 
       throw error;
+    } finally {
+      redis.destroy();
     }
   }
 

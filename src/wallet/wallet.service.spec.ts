@@ -315,8 +315,12 @@ describe('Wallet Service', () => {
       (prisma.user.update as jest.Mock).mockResolvedValue(user);
     });
 
-    it('should update db after a successful transaction', async () => {
-      const tx: Transaction = { ...transaction, status: 'SUCCESS' };
+    it('should credit the user balance after a successful deposit', async () => {
+      const tx: Transaction = {
+        ...transaction,
+        type: 'DEPOSIT',
+        status: 'SUCCESS',
+      };
       const updatedTx = { ...tx, user };
 
       (prisma.transaction.update as jest.Mock).mockResolvedValue(updatedTx);
@@ -331,9 +335,36 @@ describe('Wallet Service', () => {
         user: updatedTx.user,
         updatedTx,
       });
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: tx.userId },
+        data: { balance: { increment: tx.amount } },
+      });
     });
 
-    it('should update db after a failed transaction', async () => {
+    it('should not mutate the user balance after a successful withdrawal, since it was already reserved upfront', async () => {
+      const tx: Transaction = {
+        ...transaction,
+        type: 'WITHDRAWAL',
+        status: 'SUCCESS',
+      };
+      const updatedTx = { ...tx, user };
+
+      (prisma.transaction.update as jest.Mock).mockResolvedValue(updatedTx);
+
+      const response = walletService.updateDbAfterTransaction(
+        tx,
+        withdrawalDto.address,
+        'SUCCESS',
+      );
+
+      await expect(response).resolves.toEqual({
+        user: updatedTx.user,
+        updatedTx,
+      });
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('should not mutate the user balance after a failed transaction', async () => {
       const tx: Transaction = { ...transaction, status: 'FAILED' };
       const updatedTx = { ...tx, user };
 
@@ -349,6 +380,7 @@ describe('Wallet Service', () => {
         user: updatedTx.user,
         updatedTx,
       });
+      expect(prisma.user.update).not.toHaveBeenCalled();
     });
   });
 
@@ -891,6 +923,10 @@ describe('Wallet Service', () => {
         to: withdrawalDto.address,
       });
 
+      // Balance reservation succeeds by default; individual tests override
+      // this to simulate a concurrent withdrawal winning the race.
+      (prisma.user.updateMany as jest.Mock).mockResolvedValue({ count: 1 });
+
       jest
         .spyOn(walletService, 'updateDbAfterTransaction')
         .mockResolvedValueOnce({ user, updatedTx: transaction });
@@ -911,8 +947,54 @@ describe('Wallet Service', () => {
         'IDEMPOTENCY-KEY',
       );
       await expect(response).resolves.toBeUndefined();
+      expect(prisma.user.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: transaction.userId,
+          balance: { gte: withdrawalDto.amount },
+        },
+        data: { balance: { decrement: withdrawalDto.amount } },
+      });
       expect(metrics.incrementCounter).toHaveBeenCalledWith(
         'successful_withdrawals',
+        ['base'],
+      );
+    });
+
+    it('should decline the withdrawal without touching the chain if the balance reservation fails', async () => {
+      (prisma.user.updateMany as jest.Mock).mockResolvedValue({ count: 0 });
+
+      const response = walletService.processWithdrawalOnBase(
+        withdrawalDto,
+        transaction,
+        'IDEMPOTENCY-KEY',
+      );
+
+      await expect(response).resolves.toBeUndefined();
+      expect(Thirdweb.sendAndConfirmTransaction).not.toHaveBeenCalled();
+      expect(metrics.incrementCounter).toHaveBeenCalledWith(
+        'failed_withdrawals',
+        ['base'],
+      );
+    });
+
+    it('should refund the reserved balance if the onchain transfer fails', async () => {
+      (Thirdweb.sendAndConfirmTransaction as jest.Mock).mockRejectedValue(
+        new Error('RPC timeout'),
+      );
+
+      const response = walletService.processWithdrawalOnBase(
+        withdrawalDto,
+        transaction,
+        'IDEMPOTENCY-KEY',
+      );
+
+      await expect(response).resolves.toBeUndefined();
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: transaction.userId },
+        data: { balance: { increment: withdrawalDto.amount } },
+      });
+      expect(metrics.incrementCounter).toHaveBeenCalledWith(
+        'failed_withdrawals',
         ['base'],
       );
     });
@@ -930,6 +1012,11 @@ describe('Wallet Service', () => {
     beforeEach(() => {
       jest.spyOn(RedisService, 'connectToRedis').mockResolvedValue(redis);
       jest.spyOn(walletService, 'getPlatformWallet').mockReturnValue(keypair);
+
+      // Balance reservation succeeds by default; individual tests override
+      // this to simulate a concurrent withdrawal winning the race.
+      (prisma.user.updateMany as jest.Mock).mockResolvedValue({ count: 1 });
+
       jest
         .spyOn(walletService, 'updateDbAfterTransaction')
         .mockResolvedValueOnce({ user, updatedTx: tx });
@@ -949,13 +1036,34 @@ describe('Wallet Service', () => {
       );
 
       await expect(response).resolves.toBeUndefined();
+      expect(prisma.user.updateMany).toHaveBeenCalledWith({
+        where: { id: tx.userId, balance: { gte: dto.amount } },
+        data: { balance: { decrement: dto.amount } },
+      });
       expect(metrics.incrementCounter).toHaveBeenCalledWith(
         'successful_withdrawals',
         ['solana'],
       );
     });
 
-    it('should throw if an onchain error occurs during withdrawal from platform solana wallet', async () => {
+    it('should decline the withdrawal without touching the chain if the balance reservation fails', async () => {
+      (prisma.user.updateMany as jest.Mock).mockResolvedValue({ count: 0 });
+
+      const response = walletService.processWithdrawalOnSolana(
+        dto,
+        tx,
+        'IDEMPOTENCY-KEY',
+      );
+
+      await expect(response).resolves.toBeUndefined();
+      expect(helper.transferTokensOnSolana).not.toHaveBeenCalled();
+      expect(metrics.incrementCounter).toHaveBeenCalledWith(
+        'failed_withdrawals',
+        ['solana'],
+      );
+    });
+
+    it('should refund the reserved balance if an onchain error occurs during withdrawal from platform solana wallet', async () => {
       helper.transferTokensOnSolana.mockRejectedValue(
         new SolanaTransactionError({
           action: 'send',
@@ -972,6 +1080,10 @@ describe('Wallet Service', () => {
       );
 
       await expect(response).resolves.toBeUndefined();
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: tx.userId },
+        data: { balance: { increment: dto.amount } },
+      });
       expect(metrics.incrementCounter).toHaveBeenCalledWith(
         'failed_withdrawals',
         ['solana'],
