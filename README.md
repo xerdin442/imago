@@ -19,10 +19,6 @@ This is a stablecoin-powered wagering application that enables users create and 
 - **Savings**: Feature to enable auto-save on winnings. The savings will be staked onchain, and yields will be accumulated to grow the user's balance over time.
 - **Rewards**: Converting the current reward system to an onchain system using NFTs or SFTs.
 
-## Demo
-
-[Check here]() to see a quick demo of Imago in action.
-
 ## Deployment
 
 :globe_with_meridians: **A live deployment link and Postman collection is available upon request**
