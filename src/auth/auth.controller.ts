@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Inject,
   Post,
   Query,
   Req,
@@ -18,6 +19,7 @@ import {
   LoginDTO,
   NewPasswordDTO,
   PasswordResetDTO,
+  ResendOtpDTO,
   SignupDTO,
   Verify2faDTO,
   VerifyOtpDTO,
@@ -33,13 +35,12 @@ import { AuthService } from './auth.service';
 import {
   SocialAuthPayload,
   SocialAuthUser,
-  SessionData,
   AppleAuthDTO,
 } from '@src/common/types';
 import { generateCallbackHtml } from './helpers';
 import logger from '@src/common/logger';
 import { RedisClientType } from 'redis';
-import { connectToRedis } from '@src/common/config/redis';
+import { REDIS_CLIENT } from '@src/common/cache';
 import { Secrets } from '@src/common/secrets';
 import { AppleAuthHandler } from '@src/common/apple';
 import { UploadService } from '@src/common/config/upload';
@@ -48,13 +49,13 @@ import { UploadService } from '@src/common/config/upload';
 export class AuthController {
   private readonly context: string = AuthController.name;
 
-  private sessionData: SessionData = {};
   private readonly GOOGLE_REDIRECT_COOKIE_KEY: string =
     'google_auth_redirect_url';
 
   constructor(
     private readonly authService: AuthService,
     private readonly appleAuthHandler: AppleAuthHandler,
+    @Inject(REDIS_CLIENT) private readonly redis: RedisClientType,
   ) {}
 
   @Post('signup')
@@ -118,12 +119,6 @@ export class AuthController {
     @Req() req: Request,
     @Res() res: Response,
   ): Promise<void> {
-    const redis: RedisClientType = await connectToRedis(
-      Secrets.REDIS_URL,
-      'Social Authentication',
-      Secrets.SOCIAL_AUTH_STORE_INDEX,
-    );
-
     try {
       const authenticatedUser = req.user as SocialAuthUser;
 
@@ -138,7 +133,7 @@ export class AuthController {
       const identifier = randomUUID();
 
       // Store social authentication details for retrieval by client
-      await redis.setEx(
+      await this.redis.setEx(
         identifier,
         3600,
         JSON.stringify({ ...authenticatedUser }),
@@ -156,8 +151,6 @@ export class AuthController {
         .send(generateCallbackHtml(identifier, redirectUrl, nonce));
     } catch (error) {
       throw error;
-    } finally {
-      redis.destroy();
     }
   }
 
@@ -186,12 +179,6 @@ export class AuthController {
     @Body() dto: AppleAuthDTO,
     @Res() res: Response,
   ): Promise<void> {
-    const redis: RedisClientType = await connectToRedis(
-      Secrets.REDIS_URL,
-      'Social Authentication',
-      Secrets.SOCIAL_AUTH_STORE_INDEX,
-    );
-
     try {
       const payload = await this.appleAuthHandler.verifyIdToken(dto.id_token);
       const authenticatedUser = await this.appleAuthHandler.authenticateUser(
@@ -205,7 +192,7 @@ export class AuthController {
       const redirectUrl = dto.state.trim();
 
       // Store social authentication details for retrieval by client
-      await redis.setEx(
+      await this.redis.setEx(
         identifier,
         3600,
         JSON.stringify({ ...authenticatedUser }),
@@ -223,8 +210,6 @@ export class AuthController {
         .send(generateCallbackHtml(identifier, redirectUrl, nonce));
     } catch (error) {
       throw error;
-    } finally {
-      redis.destroy();
     }
   }
 
@@ -232,14 +217,8 @@ export class AuthController {
   async getSocialAuthDetails(
     @Query('socialAuth') identifier: string,
   ): Promise<{ details: SocialAuthUser }> {
-    const redis: RedisClientType = await connectToRedis(
-      Secrets.REDIS_URL,
-      'Social Authentication',
-      Secrets.SOCIAL_AUTH_STORE_INDEX,
-    );
-
     try {
-      const data = await redis.get(identifier);
+      const data = await this.redis.get(identifier);
       if (!data) {
         throw new BadRequestException('Invalid social auth identifier');
       }
@@ -247,8 +226,6 @@ export class AuthController {
       return { details: JSON.parse(data) as SocialAuthUser };
     } catch (error) {
       throw error;
-    } finally {
-      redis.destroy();
     }
   }
 
@@ -353,7 +330,7 @@ export class AuthController {
     @Body() dto: PasswordResetDTO,
   ): Promise<{ message: string }> {
     try {
-      await this.authService.requestPasswordReset(dto, this.sessionData);
+      await this.authService.requestPasswordReset(dto);
 
       logger.info(
         `[${this.context}] Password reset requested by ${dto.email}.\n`,
@@ -371,11 +348,11 @@ export class AuthController {
 
   @HttpCode(HttpStatus.OK)
   @Post('password/resend-otp')
-  async resendOtp(): Promise<{ message: string }> {
+  async resendOtp(@Body() dto: ResendOtpDTO): Promise<{ message: string }> {
     try {
-      await this.authService.resendOtp(this.sessionData);
+      await this.authService.resendOtp(dto.email);
       logger.info(
-        `[${this.context}] Password reset OTP re-sent to ${this.sessionData.email}.\n`,
+        `[${this.context}] Password reset OTP re-sent to ${dto.email}.\n`,
       );
 
       return { message: 'Another OTP has been sent to your email' };
@@ -392,10 +369,10 @@ export class AuthController {
   @Post('password/verify-otp')
   async verifyOtp(@Body() dto: VerifyOtpDTO): Promise<{ message: string }> {
     try {
-      await this.authService.verifyOtp(dto, this.sessionData);
+      await this.authService.verifyOtp(dto);
 
       logger.info(
-        `[${this.context}] OTP verification successful. Email: ${this.sessionData.email}\n`,
+        `[${this.context}] OTP verification successful. Email: ${dto.email}\n`,
       );
 
       return { message: 'OTP verification successful!' };
@@ -414,10 +391,11 @@ export class AuthController {
     @Body() dto: NewPasswordDTO,
   ): Promise<{ message: string }> {
     try {
-      const email = this.sessionData.email;
-      await this.authService.changePassword(dto, this.sessionData);
+      await this.authService.changePassword(dto);
 
-      logger.info(`[${this.context}] Password reset completed by ${email}.\n`);
+      logger.info(
+        `[${this.context}] Password reset completed by ${dto.email}.\n`,
+      );
 
       return { message: 'Password reset complete!' };
     } catch (error) {

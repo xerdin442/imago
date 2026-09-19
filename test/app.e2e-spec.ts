@@ -8,6 +8,7 @@ import {
   LoginDTO,
   NewPasswordDTO,
   PasswordResetDTO,
+  ResendOtpDTO,
   SignupDTO,
   Verify2faDTO,
   VerifyOtpDTO,
@@ -22,8 +23,9 @@ import {
 } from '../src/wager/dto';
 import * as argon from 'argon2';
 import { randomUUID } from 'crypto';
+import { RedisClientType } from 'redis';
 import { DbService } from '@src/db/db.service';
-import { SessionService } from '@src/common/session';
+import { REDIS_CLIENT } from '@src/common/cache';
 
 describe('E2E Tests', () => {
   const requestTimeout: number = 100000;
@@ -57,7 +59,7 @@ describe('E2E Tests', () => {
 
   let app: INestApplication<App>;
   let prisma: DbService;
-  let session: SessionService;
+  let redis: RedisClientType;
   let userOneToken: string;
   let userTwoToken: string;
   let wagerId: number;
@@ -80,13 +82,12 @@ describe('E2E Tests', () => {
       }),
     );
 
-    // Clean database and session store before running tests
+    // Clean database and redis store before running tests
     prisma = app.get(DbService);
     await prisma.cleanDb();
 
-    session = app.get(SessionService);
-    await session.onModuleInit();
-    await session.clear();
+    redis = app.get(REDIS_CLIENT);
+    await redis.flushAll();
 
     await app.init();
   });
@@ -260,9 +261,11 @@ describe('E2E Tests', () => {
     });
 
     it('should re-send password reset OTP to user email', async () => {
-      const response = await request(app.getHttpServer()).post(
-        '/auth/password/resend-otp',
-      );
+      const dto: ResendOtpDTO = { email: userOne.email };
+
+      const response = await request(app.getHttpServer())
+        .post('/auth/password/resend-otp')
+        .send(dto);
 
       expect(response.status).toEqual(200);
       expect(response.body).toHaveProperty('message');
@@ -273,6 +276,7 @@ describe('E2E Tests', () => {
 
     it('should verify password reset OTP', async () => {
       const dto: VerifyOtpDTO = {
+        email: userOne.email,
         otp: '1234',
       };
       const response = await request(app.getHttpServer())
@@ -286,6 +290,7 @@ describe('E2E Tests', () => {
 
     it('should change password and complete reset', async () => {
       const dto: NewPasswordDTO = {
+        email: userOne.email,
         newPassword: 'PassWord12!',
       };
       const response = await request(app.getHttpServer())

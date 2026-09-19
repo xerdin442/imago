@@ -6,6 +6,7 @@ import {
   Headers,
   HttpCode,
   HttpStatus,
+  Inject,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -17,9 +18,8 @@ import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { HelperService } from './helpers';
 import { WalletService } from './wallet.service';
-import { connectToRedis } from '@src/common/config/redis';
+import { REDIS_CLIENT } from '@src/common/cache';
 import { RedisClientType } from 'redis';
-import { Secrets } from '@src/common/secrets';
 import logger from '@src/common/logger';
 
 @Controller('wallet')
@@ -31,6 +31,7 @@ export class WalletController {
     private readonly helper: HelperService,
     private readonly walletService: WalletService,
     @InjectQueue('wallet-queue') private readonly walletQueue: Queue,
+    @Inject(REDIS_CLIENT) private readonly redis: RedisClientType,
   ) {}
 
   @Post('deposit')
@@ -86,13 +87,6 @@ export class WalletController {
     @Body() dto: WithdrawalDTO,
     @Headers('Idempotency-Key') idempotencyKey?: string,
   ): Promise<{ transaction?: Transaction; message?: string }> {
-    // Initialize Redis connection
-    const redis: RedisClientType = await connectToRedis(
-      Secrets.REDIS_URL,
-      'Idempotency Keys',
-      Secrets.IDEMPOTENCY_KEYS_STORE_INDEX,
-    );
-
     let claimedIdempotencyKey = false;
 
     try {
@@ -104,7 +98,7 @@ export class WalletController {
       }
 
       // Atomically claim the idempotency key
-      const claimed = await redis.set(
+      const claimed = await this.redis.set(
         idempotencyKey,
         JSON.stringify({ status: 'PROCESSING' }),
         { condition: 'NX', expiration: { type: 'EX', value: 900 } },
@@ -115,7 +109,7 @@ export class WalletController {
           `[${this.context}] Duplicate withdrawal attempts by ${user.email}\n`,
         );
 
-        const existingWithdrawal = await redis.get(idempotencyKey);
+        const existingWithdrawal = await this.redis.get(idempotencyKey);
         const { status } = JSON.parse(existingWithdrawal ?? '{}') as {
           status?: string;
         };
@@ -198,7 +192,7 @@ export class WalletController {
     } catch (error) {
       // Release the key on validation failure so a corrected retry isn't blocked
       if (claimedIdempotencyKey && idempotencyKey) {
-        await redis.del(idempotencyKey);
+        await this.redis.del(idempotencyKey);
       }
 
       logger.error(
@@ -206,8 +200,6 @@ export class WalletController {
       );
 
       throw error;
-    } finally {
-      redis.destroy();
     }
   }
 

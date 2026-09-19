@@ -37,7 +37,7 @@ import { HelperService } from './helpers';
 import { ETH_WEB3_PROVIDER_TOKEN, SOL_WEB3_PROVIDER_TOKEN } from './providers';
 import { WalletGateway } from './wallet.gateway';
 import { WalletService } from './wallet.service';
-import * as RedisService from '@src/common/config/redis';
+import { REDIS_CLIENT } from '@src/common/cache';
 import * as MailService from '@src/common/config/mail';
 
 jest.mock('thirdweb', () => ({
@@ -183,6 +183,10 @@ describe('Wallet Service', () => {
         {
           provide: SOL_WEB3_PROVIDER_TOKEN,
           useValue: connection,
+        },
+        {
+          provide: REDIS_CLIENT,
+          useValue: redis,
         },
       ],
     })
@@ -912,7 +916,6 @@ describe('Wallet Service', () => {
 
   describe('Withdrawal on Base', () => {
     beforeEach(() => {
-      jest.spyOn(RedisService, 'connectToRedis').mockResolvedValue(redis);
       jest.spyOn(walletService, 'getPlatformWallet').mockReturnValue(wallet);
 
       jest.spyOn(ThirdwebWallets, 'privateKeyToAccount').mockReturnValue({
@@ -1010,7 +1013,6 @@ describe('Wallet Service', () => {
     const tx: Transaction = { ...transaction, chain: 'SOLANA' };
 
     beforeEach(() => {
-      jest.spyOn(RedisService, 'connectToRedis').mockResolvedValue(redis);
       jest.spyOn(walletService, 'getPlatformWallet').mockReturnValue(keypair);
 
       // Balance reservation succeeds by default; individual tests override

@@ -6,7 +6,6 @@ import { JwtModule } from '@nestjs/jwt';
 import { Secrets } from '@src/common/secrets';
 import { JwtStrategy } from '@src/common/strategy/jwt.strategy';
 import { MetricsService } from '@src/metrics/metrics.service';
-import { SessionService } from '@src/common/session';
 import { AuthProcessor } from './auth.processor';
 import { GoogleStrategy } from '@src/common/strategy/google.strategy';
 import { AppleAuthHandler } from '@src/common/apple';
@@ -26,7 +25,6 @@ import { AppleAuthHandler } from '@src/common/apple';
     AuthService,
     JwtStrategy,
     MetricsService,
-    SessionService,
     AuthProcessor,
     GoogleStrategy,
     AppleAuthHandler,

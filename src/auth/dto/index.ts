@@ -66,13 +66,27 @@ export class PasswordResetDTO {
   email: string;
 }
 
+export class ResendOtpDTO {
+  @IsString()
+  @IsNotEmpty()
+  email: string;
+}
+
 export class VerifyOtpDTO {
+  @IsString()
+  @IsNotEmpty()
+  email: string;
+
   @IsString()
   @IsNotEmpty()
   otp: string;
 }
 
 export class NewPasswordDTO {
+  @IsString()
+  @IsNotEmpty()
+  email: string;
+
   @IsString()
   @IsNotEmpty()
   @IsStrongPassword(

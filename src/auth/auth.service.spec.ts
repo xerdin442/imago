@@ -8,7 +8,8 @@ import { User } from '@prisma/client';
 import * as argon from 'argon2';
 import * as speakeasy from 'speakeasy';
 import * as qrCode from 'qrcode';
-import { SessionService } from '@src/common/session';
+import { RedisClientType } from 'redis';
+import { REDIS_CLIENT } from '@src/common/cache';
 import { SocialAuthPayload, SessionData } from '@src/common/types';
 import { DbService } from '@src/db/db.service';
 import { MetricsService } from '@src/metrics/metrics.service';
@@ -37,9 +38,14 @@ describe('Auth Service', () => {
   let authService: AuthService;
   let jwt: DeepMocked<JwtService>;
   let prisma: DeepMocked<DbService>;
-  let sessionService: DeepMocked<SessionService>;
   let metrics: DeepMocked<MetricsService>;
   let authQueue: DeepMocked<Queue>;
+
+  const redis = {
+    get: jest.fn(),
+    set: jest.fn().mockResolvedValue('OK'),
+    del: jest.fn().mockResolvedValue(1),
+  } as unknown as RedisClientType;
 
   const signupDto: SignupDTO = {
     email: 'user@example.com',
@@ -77,6 +83,10 @@ describe('Auth Service', () => {
           provide: getQueueToken('auth-queue'),
           useValue: createMock<Queue>(),
         },
+        {
+          provide: REDIS_CLIENT,
+          useValue: redis,
+        },
       ],
     })
       .useMocker(createMock)
@@ -86,7 +96,6 @@ describe('Auth Service', () => {
     jwt = module.get(JwtService);
     prisma = module.get(DbService);
     metrics = module.get(MetricsService);
-    sessionService = module.get(SessionService);
     authQueue = module.get(getQueueToken('auth-queue'));
   });
 
@@ -221,10 +230,11 @@ describe('Auth Service', () => {
 
   describe('Logout', () => {
     it('should log out a user', async () => {
-      sessionService.delete.mockResolvedValue(undefined);
+      (redis.del as jest.Mock).mockResolvedValue(1);
 
       const response = await authService.logout(user.email);
       expect(response).toBeFalsy();
+      expect(redis.del).toHaveBeenCalledWith(user.email);
     });
   });
 
@@ -285,26 +295,32 @@ describe('Auth Service', () => {
   describe('Password Reset', () => {
     const currentTime = Date.now();
     const randomNumber = Math.random();
+    const otp = `${randomNumber * 10 ** 16}`.slice(3, 7);
 
-    const session: SessionData = {};
+    // Represents the session payload AuthService would have written to
+    // Redis after a successful requestPasswordReset call.
+    const session: SessionData = {
+      email: user.email,
+      otp,
+      otpExpiration: currentTime + 60 * 60 * 1000,
+    };
 
     beforeEach(() => {
       jest.spyOn(Math, 'random').mockReturnValue(randomNumber);
       jest.spyOn(Date, 'now').mockReturnValue(currentTime);
 
       (authQueue.add as jest.Mock).mockResolvedValue({ id: 1 });
-      sessionService.set.mockResolvedValue(undefined);
-      sessionService.get.mockResolvedValue(session);
+      (redis.set as jest.Mock).mockResolvedValue('OK');
+      (redis.get as jest.Mock).mockResolvedValue(JSON.stringify(session));
     });
 
     describe('Request Reset', () => {
       it('should throw if no user is found with email in reset request', async () => {
         (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
 
-        const response = authService.requestPasswordReset(
-          { email: 'wrongemail@example.com' },
-          session,
-        );
+        const response = authService.requestPasswordReset({
+          email: 'wrongemail@example.com',
+        });
 
         await expect(response).rejects.toBeInstanceOf(BadRequestException);
         await expect(response).rejects.toThrow(
@@ -315,54 +331,63 @@ describe('Auth Service', () => {
       it('should request password reset and send otp', async () => {
         (prisma.user.findUnique as jest.Mock).mockResolvedValue(user);
 
-        const response = authService.requestPasswordReset({ ...user }, session);
+        const response = authService.requestPasswordReset({
+          email: user.email,
+        });
+
         await expect(response).resolves.toBeUndefined();
+        expect(redis.set).toHaveBeenCalledWith(
+          user.email,
+          JSON.stringify(session),
+        );
       });
     });
 
     describe('Resend OTP', () => {
       it('should throw if no user is found in session', async () => {
-        sessionService.get.mockResolvedValue({});
+        (redis.get as jest.Mock).mockResolvedValue(JSON.stringify({}));
 
-        const response = authService.resendOtp({ email: undefined });
+        const response = authService.resendOtp(user.email);
         await expect(response).rejects.toBeInstanceOf(BadRequestException);
         await expect(response).rejects.toThrow('Email not found in session');
       });
 
       it('should resend password reset otp', async () => {
-        const response = authService.resendOtp(session);
+        const response = authService.resendOtp(user.email);
         await expect(response).resolves.toBeUndefined();
       });
     });
 
     describe('Verify OTP', () => {
       it('should throw if reset otp is invalid', async () => {
-        const response = authService.verifyOtp({ otp: 'WrongOTP' }, session);
+        const response = authService.verifyOtp({
+          email: user.email,
+          otp: 'WrongOTP',
+        });
 
         await expect(response).rejects.toBeInstanceOf(BadRequestException);
         await expect(response).rejects.toThrow('Invalid OTP');
       });
 
       it('should throw if reset otp has expired', async () => {
-        sessionService.get.mockResolvedValue({
-          ...session,
-          otpExpiration: currentTime - 1000,
-        });
-
-        const response = authService.verifyOtp(
-          { otp: session.otp as string },
-          session,
+        (redis.get as jest.Mock).mockResolvedValue(
+          JSON.stringify({ ...session, otpExpiration: currentTime - 1000 }),
         );
+
+        const response = authService.verifyOtp({
+          email: user.email,
+          otp: session.otp as string,
+        });
 
         await expect(response).rejects.toBeInstanceOf(BadRequestException);
         await expect(response).rejects.toThrow('This OTP has expired');
       });
 
       it('should successfully verify a vaild and unexpired reset otp', async () => {
-        const response = authService.verifyOtp(
-          { otp: session.otp as string },
-          session,
-        );
+        const response = authService.verifyOtp({
+          email: user.email,
+          otp: session.otp as string,
+        });
         await expect(response).resolves.toBeUndefined();
       });
     });
@@ -372,8 +397,11 @@ describe('Auth Service', () => {
         (prisma.user.findUniqueOrThrow as jest.Mock).mockResolvedValue(user);
         jest.spyOn(argon, 'verify').mockResolvedValue(true);
 
-        const dto: NewPasswordDTO = { newPassword: user.password };
-        const response = authService.changePassword(dto, session);
+        const dto: NewPasswordDTO = {
+          email: user.email,
+          newPassword: user.password,
+        };
+        const response = authService.changePassword(dto);
 
         await expect(response).rejects.toBeInstanceOf(BadRequestException);
         await expect(response).rejects.toThrow(
@@ -386,11 +414,14 @@ describe('Auth Service', () => {
         (prisma.user.update as jest.Mock).mockResolvedValue(user);
         jest.spyOn(argon, 'verify').mockResolvedValue(false);
 
-        const dto: NewPasswordDTO = { newPassword: 'newSecurePassword' };
-        const response = authService.changePassword(dto, session);
+        const dto: NewPasswordDTO = {
+          email: user.email,
+          newPassword: 'newSecurePassword',
+        };
+        const response = authService.changePassword(dto);
 
         await expect(response).resolves.toBeUndefined();
-        expect(session).toEqual({});
+        expect(redis.del).toHaveBeenCalledWith(user.email);
       });
     });
   });

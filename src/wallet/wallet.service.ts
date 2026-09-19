@@ -40,7 +40,7 @@ import { MetricsService } from '@src/metrics/metrics.service';
 import { HelperService } from './helpers';
 import logger from '@src/common/logger';
 import { sendEmail } from '@src/common/config/mail';
-import { connectToRedis } from '@src/common/config/redis';
+import { REDIS_CLIENT } from '@src/common/cache';
 import { Secrets } from '@src/common/secrets';
 
 @Injectable()
@@ -64,6 +64,7 @@ export class WalletService {
     private readonly helper: HelperService,
     @Inject(ETH_WEB3_PROVIDER_TOKEN) private readonly web3: Web3,
     @Inject(SOL_WEB3_PROVIDER_TOKEN) private readonly connection: Connection,
+    @Inject(REDIS_CLIENT) private readonly redis: RedisClientType,
   ) {
     // Fetch the official USDC token addresses
     this.BASE_USDC_TOKEN_ADDRESS = this.helper.selectUSDCTokenAddress('BASE');
@@ -215,13 +216,12 @@ export class WalletService {
   }
 
   private async settleIdempotencyKey(
-    redis: RedisClientType,
     idempotencyKey: string,
     status: 'COMPLETE' | 'FAILED',
   ): Promise<void> {
-    const ttl = await redis.ttl(idempotencyKey);
-    await redis.set(idempotencyKey, JSON.stringify({ status }));
-    if (ttl > 0) await redis.expire(idempotencyKey, ttl);
+    const ttl = await this.redis.ttl(idempotencyKey);
+    await this.redis.set(idempotencyKey, JSON.stringify({ status }));
+    if (ttl > 0) await this.redis.expire(idempotencyKey, ttl);
   }
 
   async processDepositOnBase(
@@ -494,13 +494,6 @@ export class WalletService {
   ): Promise<void> {
     const metricLabels: string[] = [dto.chain.toLowerCase()];
 
-    // Initialize Redis connection
-    const redis: RedisClientType = await connectToRedis(
-      Secrets.REDIS_URL,
-      'Idempotency Keys',
-      Secrets.IDEMPOTENCY_KEYS_STORE_INDEX,
-    );
-
     try {
       // Atomically debit the balance before touching the chain. If two
       // withdrawal requests race each other, only one wins this check.
@@ -518,7 +511,7 @@ export class WalletService {
 
         this.metrics.incrementCounter('failed_withdrawals', metricLabels);
         this.gateway.sendTransactionStatus(user.email, updatedTx);
-        await this.settleIdempotencyKey(redis, idempotencyKey, 'FAILED');
+        await this.settleIdempotencyKey(idempotencyKey, 'FAILED');
 
         logger.warn(
           `[${this.context}] Withdrawal declined for insufficient balance. User: ${user.email}, Amount: $${dto.amount}\n`,
@@ -575,7 +568,7 @@ export class WalletService {
       this.gateway.sendTransactionStatus(user.email, updatedTx);
 
       // Update status of idempotency key
-      await this.settleIdempotencyKey(redis, idempotencyKey, 'COMPLETE');
+      await this.settleIdempotencyKey(idempotencyKey, 'COMPLETE');
 
       // Notify user of successful withdrawal
       const date: string = updatedTx.createdAt.toISOString();
@@ -595,7 +588,7 @@ export class WalletService {
 
       this.metrics.incrementCounter('failed_withdrawals', metricLabels);
       this.gateway.sendTransactionStatus(user.email, updatedTx);
-      await this.settleIdempotencyKey(redis, idempotencyKey, 'FAILED');
+      await this.settleIdempotencyKey(idempotencyKey, 'FAILED');
 
       const date: string = updatedTx.createdAt.toISOString();
       const content = `Your withdrawal of $${dto.amount} on ${date} was unsuccessful. Please try again later.`;
@@ -606,8 +599,6 @@ export class WalletService {
       );
 
       return;
-    } finally {
-      redis.destroy();
     }
   }
 
@@ -618,12 +609,6 @@ export class WalletService {
   ): Promise<void> {
     let signature: string = '';
     const metricLabels: string[] = [dto.chain.toLowerCase()];
-
-    const redis: RedisClientType = await connectToRedis(
-      Secrets.REDIS_URL,
-      'Idempotency Keys',
-      Secrets.IDEMPOTENCY_KEYS_STORE_INDEX,
-    );
 
     try {
       // Atomically debit the balance before touching the chain. If two
@@ -642,7 +627,7 @@ export class WalletService {
 
         this.metrics.incrementCounter('failed_withdrawals', metricLabels);
         this.gateway.sendTransactionStatus(user.email, updatedTx);
-        await this.settleIdempotencyKey(redis, idempotencyKey, 'FAILED');
+        await this.settleIdempotencyKey(idempotencyKey, 'FAILED');
 
         logger.warn(
           `[${this.context}] Withdrawal declined for insufficient balance. User: ${user.email}, Amount: $${dto.amount}\n`,
@@ -682,7 +667,7 @@ export class WalletService {
       this.gateway.sendTransactionStatus(user.email, updatedTx);
 
       // Update status of idempotency key
-      await this.settleIdempotencyKey(redis, idempotencyKey, 'COMPLETE');
+      await this.settleIdempotencyKey(idempotencyKey, 'COMPLETE');
 
       // Notify user of successful withdrawal
       const date: string = updatedTx.createdAt.toISOString();
@@ -702,7 +687,7 @@ export class WalletService {
 
       this.metrics.incrementCounter('failed_withdrawals', metricLabels);
       this.gateway.sendTransactionStatus(user.email, updatedTx);
-      await this.settleIdempotencyKey(redis, idempotencyKey, 'FAILED');
+      await this.settleIdempotencyKey(idempotencyKey, 'FAILED');
 
       const date: string = updatedTx.createdAt.toISOString();
       const content = `Your withdrawal of $${dto.amount} on ${date} was unsuccessful. Please try again later.`;
@@ -713,8 +698,6 @@ export class WalletService {
       );
 
       return;
-    } finally {
-      redis.destroy();
     }
   }
 

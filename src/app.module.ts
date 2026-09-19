@@ -12,6 +12,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { BullModule } from '@nestjs/bull';
 import { AppController } from './app.controller';
+import { RedisModule } from './common/cache';
 
 @Module({
   imports: [
@@ -22,12 +23,12 @@ import { AppController } from './app.controller';
     WalletModule,
     DbModule,
     MetricsModule,
+    RedisModule,
     ConfigModule.forRoot({ isGlobal: true }),
     BullModule.forRoot({
       redis: {
         host: Secrets.REDIS_HOST,
         port: Secrets.REDIS_PORT,
-        db: Secrets.QUEUE_STORE_INDEX,
         password: Secrets.REDIS_PASSWORD,
         family: 0,
       },

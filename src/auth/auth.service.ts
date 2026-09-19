@@ -1,5 +1,5 @@
 import { InjectQueue } from '@nestjs/bull';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Queue } from 'bull';
 import * as argon from 'argon2';
@@ -16,7 +16,8 @@ import {
   VerifyOtpDTO,
 } from './dto';
 import { randomUUID } from 'crypto';
-import { SessionService } from '@src/common/session';
+import { RedisClientType } from 'redis';
+import { REDIS_CLIENT } from '@src/common/cache';
 import { SessionData, SocialAuthPayload } from '@src/common/types';
 import { DbService } from '@src/db/db.service';
 import { MetricsService } from '@src/metrics/metrics.service';
@@ -27,10 +28,19 @@ export class AuthService {
   constructor(
     private readonly prisma: DbService,
     private readonly jwt: JwtService,
-    private readonly sessionService: SessionService,
     private readonly metrics: MetricsService,
+    @Inject(REDIS_CLIENT) private readonly redis: RedisClientType,
     @InjectQueue('auth-queue') private readonly authQueue: Queue,
   ) {}
+
+  private async getSession(key: string): Promise<SessionData> {
+    const data = await this.redis.get(key);
+    return JSON.parse(data as string) as SessionData;
+  }
+
+  private async setSession(key: string, data: SessionData): Promise<void> {
+    await this.redis.set(key, JSON.stringify(data));
+  }
 
   async createNewUser(
     details: SignupDTO | SocialAuthPayload,
@@ -145,7 +155,7 @@ export class AuthService {
 
   async logout(email: string): Promise<void> {
     try {
-      await this.sessionService.delete(email);
+      await this.redis.del(email);
     } catch (error) {
       throw error;
     }
@@ -213,25 +223,26 @@ export class AuthService {
     }
   }
 
-  async requestPasswordReset(
-    dto: PasswordResetDTO,
-    data: SessionData,
-  ): Promise<void> {
+  async requestPasswordReset(dto: PasswordResetDTO): Promise<void> {
     try {
       const user = await this.prisma.user.findUnique({
         where: { email: dto.email },
       });
 
       if (user) {
-        // Set the OTP value and expiration time, and store them in session
-        data.email = dto.email;
-        data.otp = `${Math.random() * 10 ** 16}`.slice(3, 7);
-        data.otpExpiration = Date.now() + 60 * 60 * 1000;
+        const session: SessionData = {
+          email: dto.email,
+          otp: `${Math.random() * 10 ** 16}`.slice(3, 7),
+          otpExpiration: Date.now() + 60 * 60 * 1000,
+        };
 
-        await this.sessionService.set(dto.email, data);
+        await this.setSession(dto.email, session);
 
         // Send the OTP via email
-        await this.authQueue.add('otp', { email: user.email, otp: data.otp });
+        await this.authQueue.add('otp', {
+          email: user.email,
+          otp: session.otp,
+        });
 
         return;
       } else {
@@ -242,21 +253,18 @@ export class AuthService {
     }
   }
 
-  async resendOtp(data: SessionData): Promise<void> {
+  async resendOtp(email: string): Promise<void> {
     try {
       // Retrieve existing session data
-      const session = await this.sessionService.get(data.email as string);
+      const session = await this.getSession(email);
       if (session.email) {
         // Reset the OTP value and expiration time
-        data.otp = `${Math.random() * 10 ** 16}`.slice(3, 7);
-        data.otpExpiration = Date.now() + 60 * 60 * 1000;
-        await this.sessionService.set(data.email as string, data);
+        session.otp = `${Math.random() * 10 ** 16}`.slice(3, 7);
+        session.otpExpiration = Date.now() + 60 * 60 * 1000;
+        await this.setSession(email, session);
 
         // Send another email with the new OTP
-        await this.authQueue.add('otp', {
-          email: data.email as string,
-          otp: data.otp,
-        });
+        await this.authQueue.add('otp', { email, otp: session.otp });
 
         return;
       } else {
@@ -267,10 +275,10 @@ export class AuthService {
     }
   }
 
-  async verifyOtp(dto: VerifyOtpDTO, data: SessionData): Promise<void> {
+  async verifyOtp(dto: VerifyOtpDTO): Promise<void> {
     try {
       // Retrieve existing session data
-      const session = await this.sessionService.get(data.email as string);
+      const session = await this.getSession(dto.email);
 
       // Check if OTP is invalid or expired
       if (session.email) {
@@ -289,10 +297,10 @@ export class AuthService {
     }
   }
 
-  async changePassword(dto: NewPasswordDTO, data: SessionData): Promise<void> {
+  async changePassword(dto: NewPasswordDTO): Promise<void> {
     try {
       // Retrieve existing session data
-      const session = await this.sessionService.get(data.email as string);
+      const session = await this.getSession(dto.email);
       // Find user with email stored in session
       const user = await this.prisma.user.findUniqueOrThrow({
         where: { email: session.email },
@@ -313,11 +321,8 @@ export class AuthService {
         data: { password: hash },
       });
 
-      // Clear session data after completing password reset
-      delete data.email;
-      delete data.otp;
-      delete data.otpExpiration;
-      await this.sessionService.set(user.email, data);
+      // Clear session data now that password reset is complete
+      await this.redis.del(user.email);
 
       return;
     } catch (error) {
