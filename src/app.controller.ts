@@ -5,6 +5,6 @@ import { Response } from 'express';
 export class AppController {
   @Get('health')
   check(@Res() res: Response) {
-    return res.status(HttpStatus.OK).send('Imago is running!');
+    return res.status(HttpStatus.OK).send('Imago API is running!');
   }
 }
